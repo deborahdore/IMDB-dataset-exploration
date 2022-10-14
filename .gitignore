@@ -3,3 +3,6 @@ schemas/.DS_Store
 *.DS_Store
 */.DS_Store
 .DS_Store
+.Rproj.user
+*.Rproj
+*/*.Rproj
