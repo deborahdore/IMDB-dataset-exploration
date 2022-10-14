@@ -5,6 +5,20 @@ Creating a good model always depends on the quality of the dataset. The explorat
 In this repo, we explored the IMDB dataset to understand its limits and formulate hypothesis with the use of graph made with R.
 
 
+# Hypotheses
+- What is the relationship between the number of votes and the rating?
+- Create a score for the popularity of actors
+- Do newer movies have better ratings?
+- Are movies in original language more popular?
+- titles portraying someone playing themselves have better rating
+- titles with people born before 1880 have different distribution of categories (i.e. mostly documentaries?)
+- development of the distribution of the genres throughout the years
+- titles whose directors and/or writers have multiple professions have better ratings
+- Do series that run longer time have better ratings?
+- Do the ratings of seasons of a series decline throughout time?
+- Does the popularity of a title have a relationship with the career of a actor afterwards?
+
+
 # git workflow
 
 1. `git status` - check if it only shows file you actually edited, added or deleted
