@@ -4,6 +4,7 @@ library(magrittr)
 library(ggplot2); theme_set(theme_minimal())
 path = "../IMDB-dataset-exploration-data"
 
+# I changed this line
 
 # POSSIBLE HYPOTHESES
 # - titles with more (>= 6?) principal persons have better rating
