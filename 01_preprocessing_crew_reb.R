@@ -69,4 +69,4 @@ crew[, tconst := as.integer(gsub("^tt", "", tconst))]  # convert to integer
 
 
 # SAVE CLEANED DATSET ---------------------------------------------------------
-fwrite(crew, paste0(path, "/title.crew_clean.rds"))
+fwrite(crew, paste0(path, "/title.crew_clean.csv"))

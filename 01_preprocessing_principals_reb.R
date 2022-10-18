@@ -88,4 +88,4 @@ ggsave("plots/01_preprocessing_categories_barplot.jpg", height = 5, width = 10)
 
 
 # SAVE CLEANED DATASET --------------------------------------------------------
-fwrite(principals, paste0(path, "/title.principals_clean.rds"))
+fwrite(principals, paste0(path, "/title.principals_clean.csv"))
