@@ -1,7 +1,7 @@
 
 # install.packages("data.table")
 library(data.table)
-path = "../IMDB-dataset-exploration-data"
+path = "/Users/marianabarbosa/Documents/IMDB"
 
 # missing values are denoted "\\N"
 
