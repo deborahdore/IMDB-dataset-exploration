@@ -5,6 +5,21 @@ Creating a good model always depends on the quality of the dataset. The explorat
 In this repo, we explored the IMDB dataset to understand its limits and formulate hypothesis with the use of graph made with R.
 
 
+# Hypotheses
+- What is the relationship between the number of votes and the rating? (title.ratings; Mariana)
+- Create a score for the popularity of actors $\rightarrow$ DIFFICULT
+- Do newer movies have better ratings? (title.ratings, title.basics; Mariana)
+- Are movies in original language more popular? (title.akas, title.ratings; Deborah)
+- titles portraying someone playing themselves have better rating (title.ratings, title.principals; Rebekka)
+- titles with people born before 1880 have different distribution of genres (i.e. mostly documentaries?) (name.basics, title.basics; Rebekka)
+- development of the distribution of the genres throughout the years (title.basics; Mariana)
+- titles whose directors and/or writers have multiple professions have better ratings (title.crew, name.basics; Rebekka)
+- Do series that run longer time have better ratings? (title.basics, title.ratings, Deborah)
+- Do the ratings of seasons of a series decline throughout time? (title.episode, title.ratings, Deborah)
+- Does the popularity of a title have a relationship with the career of an actor afterwards? $\rightarrow$ DIFFICULT
+
+
+
 # git workflow
 
 1. `git status` - check if it only shows file you actually edited, added or deleted
