@@ -1,7 +1,7 @@
 
 # install.packages("data.table")
 library(data.table)
-path = "../IMDB-dataset-exploration-data"
+path = "../IMBD-dataset-exploration-data"
 
 # missing values are denoted "\\N"
 
