@@ -10,6 +10,7 @@ During WW2:
 1. Did the production of titles decrease ?
 2. Did the distribution of title types change ?
 3. Did the distribution of national movies increase ?
+4. Did the popularity of Italian/German/American movie decreased/increased after WW2?
 
 # git workflow
 
