@@ -46,7 +46,7 @@ table(ta$region)
 sum(is.na(ta$language)) #6290157
 paste0("Percentage of nans in language column is: ", as.integer((sum(is.na(ta$language))/nrow(ta))*100), "%")
 table(ta$language)
-ta[is.na(language), language] <- textcat(ta[is.na(language), title])
+ta[is.na(language), language:=textcat(title)]
 
 # types ----
 sum(is.na(ta$types)) #28113709
