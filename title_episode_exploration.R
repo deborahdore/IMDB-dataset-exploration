@@ -1,54 +1,72 @@
 library(data.table)
 library(ggplot2)
-library(tidyverse)
-library(psych)
 library(dplyr)
 library(textcat)
-library(rpart)
-library(mice)
-library(tm)
 
 path <- "//Users/deborah/Documents/IMDB-dataset-exploration/dataset/"
 
-# load datasets ----
-te = fread(paste0(path, "title.episode.tsv"))
+# LOAD DATASET -----------------------------------------------------------------
+te = fread(paste0(path, "/title.episode.tsv"))
+tb = fread(paste0(path, "/title.basic.csv"))
 
+# FUNCTIONS --------------------------------------------------------------------
+
+fn_percentage <- function(nan_rows, tot_rows){
+  return ((nan_rows/tot_rows)*100)
+}
+
+# CLEANING ---------------------------------------------------------------------
+te[tconst == "\\N", tconst:=NA]
+te[parentTconst == "\\N", parentTconst:=NA]
+te[seasonNumber == "\\N", seasonNumber:=NA]
+te[episodeNumber == "\\N", episodeNumber:=NA]
+
+te[, tconst:=as.numeric(gsub("[^0-9.-]", "", tconst))]
+te[, parentTconst:=as.numeric(gsub("[^0-9.-]", "", parentTconst))]
+te[, seasonNumber:=as.numeric(seasonNumber)]
+te[, episodeNumber:=as.numeric(episodeNumber)]
+
+te = subset(te[!(is.na(seasonNumber)), ])
+
+
+
+# EXPLORATORY DATA ANALYSIS ----------------------------------------------------
 str(te)
 
-# search NaN values ----
-sum(te$tconst == "\\N")
-sum(te$parentTconst == "\\N")
-sum(te$seasonNumber == "\\N")
-sum(te$episodeNumber == "\\N")
+#every time a season number is null, the episode number is null
+count(te[is.na(tconst)])
+count(te[is.na(parentTconst)])
+count(te[is.na(seasonNumber)]) #1468784
+count(te[is.na(episodeNumber)]) #1468784
 
-# tconst ----
-te[tconst == "\\N", tconst:=NA]
-sum(is.na(te$tconst)) # no nans
-te$tconst <- as.numeric(gsub("[^0-9.-]", "", te$tconst))
-
-# parentTconst ----
-te[parentTconst == "\\N", parentTconst:=NA]
-sum(is.na(te$parentTconst)) # no nans
-te$parentTconst <- as.numeric(gsub("[^0-9.-]", "", te$parentTconst))
-
-# seasonNumber ----
-te[seasonNumber == "\\N", seasonNumber:=NA]
-sum(is.na(te$seasonNumber))  # 1468784
-te[is.na(seasonNumber)]
-paste0("Percentage of nans in seasonNumber column is: ", as.numeric((sum(is.na(te$seasonNumber))/nrow(te))*100), "%")
-te = subset(te[!(is.na(seasonNumber)), ])
-te$seasonNumber <- as.numeric(te$seasonNumber)
-max = max(te[, seasonNumber])
-max
-# a series with 2022 seasons seems impossibile -- max 200 seasons
-te <- subset(te[te$seasonNumber < 200, ])
+paste0("percentage of nan values in startYear is: ", 
+       fn_percentage(count(te[is.na(seasonNumber)]), nrow(te)), "%")
+paste0("percentage of nan values in startYear is: ", 
+       fn_percentage(count(te[is.na(episodeNumber)]), nrow(te)), "%")
 
 
-# episodeNumber ----
-te[episodeNumber == "\\N", episodeNumber:=NA]
-sum(is.na(te$episodeNumber)) # no nans
-te$episodeNumber <- as.numeric(te$episodeNumber)
-max(te[, episodeNumber])
+max(te[, seasonNumber], na.rm=TRUE) 
+# a series with 2022 seasons seems impossible
+# turns out thay they mistaken the season by the year
+nrow(te) == length(unique(te[, tconst]))
+
+
+subs = te[seasonNumber >= 1000, ]  # year instead of season number
+ordered = subs[order(seasonNumber)] %>% group_by(parentTconst)
+ordered$seasonNumber = as.numeric(factor(ordered$seasonNumber))
+ordered
+total = merge(te[seasonNumber >= 1000, ], 
+               ordered, by=c("tconst", "parentTconst", "episodeNumber"))
+total[, seasonNumber.x:=NULL]
+setnames(total, "seasonNumber.y", "seasonNumber")
+
+te = te[seasonNumber<1000]
+te_concat <- rbindlist(list(te, total), use.names=TRUE)    # Rbind data.tables
+te_concat
+
+max(te_concat[, episodeNumber])
 ggplot(te, aes(x=factor(episodeNumber))) + geom_bar()
 
-saveRDS(te, paste0(path, "/title.episode_cleaned.rds"))
+
+# SAVING -----------------------------------------------------------------------
+saveRDS(te_concat, paste0(path, "/title.episode_cleaned.rds"))
