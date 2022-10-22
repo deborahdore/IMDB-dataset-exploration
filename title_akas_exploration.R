@@ -48,7 +48,7 @@ sum(is.na(ta[,titleId])) # no nans
 head(ta[,titleId])
 
 # ordering ----
-sum(is.na(ta[ordering])) # no nas
+sum(is.na(ta[,ordering])) # no nas
 ta[, ordering := NULL] # delete column
 
 # title ----
