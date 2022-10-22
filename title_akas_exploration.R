@@ -1,12 +1,7 @@
 library(data.table)
 library(ggplot2)
 library(magrittr)
-# library(tidyverse)
-# library(psych)
-# library(dplyr)
 library(textcat)
-# library(rpart)
-# library(mice)
 
 path <- "//Users/deborah/Documents/IMDB-dataset-exploration/dataset/"
 
@@ -70,7 +65,8 @@ table(ta[,region])
 sum(is.na(ta[,language])) #6290157
 paste0("Percentage of nans in language column is: ", as.integer((sum(is.na(ta[,language]))/nrow(ta))*100), "%")
 table(ta[,language])
-ta[is.na(language), language := textcat(title)] # detect the language of the title to fill NAs
+# to do on smaller dataset
+#ta[is.na(language), language := textcat(title)] # detect the language of the title to fill NAs
 
 # types ----
 sum(is.na(ta[,types])) #28113709
