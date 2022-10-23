@@ -7,7 +7,6 @@ path <- "//Users/deborah/Documents/IMDB-dataset-exploration/dataset/"
 
 # LOAD DATASET -----------------------------------------------------------------
 te = fread(paste0(path, "/title.episode.tsv"))
-tb = fread(paste0(path, "/title.basic.csv"))
 
 # FUNCTIONS --------------------------------------------------------------------
 
@@ -69,4 +68,4 @@ ggplot(te, aes(x=factor(episodeNumber))) + geom_bar()
 
 
 # SAVING -----------------------------------------------------------------------
-saveRDS(te_concat, paste0(path, "/title.episode_cleaned.rds"))
+fwrite(te_concat, paste0(path, "/title.episode_cleaned.csv"))
