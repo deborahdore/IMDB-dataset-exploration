@@ -3,52 +3,124 @@ library(data.table)
 library(magrittr)
 library(tidyr)
 library(ggplot2); theme_set(theme_bw())
+options(scipen = 1000000)
 path = "../IMBD-dataset-exploration-data/"
 
 
 tb = fread(paste0(path, "/title.basics_cleaned.csv"))
-# tb = fread("../IMDB-dataset-exploration-data/title.basics_cleaned.csv", sep2="\\|") # sep2="|" should transform the genres into a list, but it doesn't work
-tb[, genres := strsplit(tb[,genres], "\\|")]
+tb = fread("../IMDB-dataset-exploration-data/title.basics_cleaned.csv", sep2="\\|") # sep2="|" should transform the genres into a list, but it doesn't work
+tb[, genres_list := strsplit(genres, "\\|")]
+
+# Analyzing missing values
+nrow(tb[(genres == "") & is.na(startYear)])  # 77232 (0.8%) titles have neither a startYear nor a genre
+# missing startYear
+missing_startYear = table(tb[is.na(startYear), genres_list] %>% unlist()) %>% sort(decreasing = TRUE) %>% as.data.frame()
+ggplot(missing_startYear, aes(x = Var1, y = Freq)) +
+  ggtitle("Genres of titles with missing start year") +
+  geom_bar(stat = "identity") +
+  xlab("") + ylab("Count") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+ggsave("plots/03_hypothesis_genres_missing_startYear.jpg", width = 8, height = 4)
+# missing genre
+missing_genre = table(tb[(genres == "") & !is.na(startYear), startYear]) %>% as.data.frame()
+ggplot(missing_genre, aes(x = Var1, y = Freq)) +
+  ggtitle("Start years with missing genre") +
+  geom_bar(stat = "identity") +
+  xlab("") + ylab("Count") +
+  scale_x_discrete(breaks = seq(1900, 2020, 10))
+ggsave("plots/03_hypothesis_genres_missing_genre.jpg", width = 8, height = 4)
+
+
+# delete rows with missing genre or startYear, filter for 1897 <= startYear <= 2022 
+tb = tb[(!is.na(startYear)) & (startYear <= 2022) & (startYear >= 1897)]
+tb = tb[genres != ""] 
+tb[, genres := genres_list][, genres_list := NULL]
 
 
 # AFTER WORLD WAR II ...
 
 ##### ... DID THE DISTRIBUTION OF GENRES CHANGE?
-tb_years = tb[(!is.na(startYear)) & (startYear <= 2022) & (startYear >= 1897)]
-tb_head = tb_years[sample(1:nrow(tb_years), 10000), 1:9, with = FALSE]
 # all_genres = tb[1:1000000, genres] %>% unlist() %>% unique()
-all_genres = c("Adventure", "Animation", "Biography", "Comedy", "Crime",
-               "Documentary", "Drama", "Family", "Film-Noir", "Game-Show",
-               "History", "Horror", "Music", "News", "Reality-TV",
-               "Romance", "Sci-Fi", "Short", "Sport", "Talk-Show",
-               "Thriller", "War", "Western")
+all_genres = c("Comedy", "Short", "Documentary", "Sport", "Horror", "News",
+               "Fantasy", "Drama", "Crime", "Western", "Biography",
+               "Romance", "Family", "Animation", "Adventure", "Action", "History",
+               "Music", "Mystery", "Sci-Fi", "Musical", "Thriller", "Film-Noir",
+               "Talk-Show", "Game-Show", "Reality-TV", "Adult")
+
+all_genres = c("History", "War", "Documentary", "Biography", "News",
+               "Drama", "Romance", "Crime", "Comedy", "Short",
+               "Family", "Animation", "Adventure", "Action", "Sci-Fi",
+               "Music", "Musical", "Sport", "Talk-Show", "Film-Noir")
 
 # create dataframe for plot
-genres_distr = lapply(all_genres, function(g) {
-  x = tb_years[, .(startYear, genres)]
-  x = x[lapply(genres, function(i) any(g == i)) %>% unlist(), .N, by = startYear]
-  y = x[, .N, by = startYear]
-  x = merge(x, y, by = "startYear")
-  x[, genre := g]
-}) %>% do.call(what = rbind)
-genres_distr[, share := N.x / sum(N.y), by = startYear]
-genres_distr = merge(merge(data.frame("startYear" = 1897:2022), data.frame("genre" = all_genres)) %>% as.data.table(),
-                     genres_distr, all = TRUE, by = c("startYear", "genre"))
-genres_distr[, `:=`(N.x = NULL, N.y = NULL)]
-genres_distr[is.na(share), share := 0]
+tb_distr = tb[, .(startYear, genres)]
+for (g_col in all_genres) {
+  tb_distr[, (g_col) := lapply(genres, function(g_row) any(g_row == g_col)) %>% unlist()]
+}
+tb_distr = tb_distr[, lapply(.SD, sum), by = startYear, .SDcols = all_genres]
+tb_distr = melt(tb_distr, id.vars = "startYear", variable.name = "genre", value.name = "count")
+tb_distr[, total := sum(count), by = startYear]
+tb_distr[, share := count/total]
+tb_distr[, ypos := max(share), by = genre]
 
 # plot
-ggplot(genres_distr, aes(x = startYear, y = share)) +
+ggplot(tb_distr, aes(x = startYear, y = share)) +
+  # annotate("text", label = "World War II", x = 1915, y = 0.01, size = 3) +
   geom_rect(xmin = 1939, xmax = 1945, ymin = 0, ymax = 1, alpha = 0.005, fill = "red") +
   geom_line() +
   facet_wrap(~ genre, ncol = 4, scales = "free") +
   scale_x_continuous(breaks = seq(1900, 2022, by = 25)) +
-  xlab("Start year (red: World War II)") +
+  xlab("Start year      (red: World War II)") +
   ylab("Share of each genre in all titles of one year") +
   ggtitle("Development of the distribution of genres before and after World War II")
+  # geom_text(mapping = aes(x = 1945, y = ymax * 0.95, label = "World War II"), data = unique(tb_distr[, .(genre, ymax)]), size = 3) +
 ggsave("plots/03_hypothesis_genres_distribution.jpg", width = 10, height = 8)
 
 
+
+##### ... WHAT IS THE DISTRIBUTION OF THE GENRE "WAR" IN THE OTHER GENRES?
+all_genres = c("Comedy", "Short", "Documentary", "News",
+               "Fantasy", "Drama", "Biography",
+               "Romance", "Family", "Adventure", "Action", "History")
+tb_war = tb[, .(startYear, genres)]
+tb_war[, War := lapply(genres, function(g) "War" %in% g) %>% unlist()]
+tb_war = tb_war[War == TRUE]
+for (g_col in all_genres) {
+  tb_war[, (g_col) := lapply(genres, function(g_row) any(g_row == g_col)) %>% unlist()]
+}
+tb_war[, genres := NULL]
+tb_war = tb_war[, lapply(.SD, sum), by = startYear, .SDcols = c(all_genres, "War")]
+tb_war = melt(tb_war, id.vars = c("startYear", "War"))
+tb_war[, genre := variable][, variable := NULL]
+tb_war[, total := value / War, by = startYear]
+
+ggplot(tb_war, aes(x = startYear, y = War)) +
+  geom_line() +
+  xlab("Start year") +
+  ylab("Titles of genre \"War\"")
+ggsave("plots/03_hypothesis_genres_war_timeline.jpg", width = 6, height = 3)
+
+ggplot(tb_war, aes(x = startYear)) +
+  geom_rect(xmin = 1939, xmax = 1945, ymin = 0, ymax = 0.9, alpha = 0.005, fill = "red") +
+  annotate("text", label = "World War II", x = 1945, y = 0.95, size = 3) +
+  geom_line(aes(y = total)) +
+  facet_wrap(~ genre, ncol = 4) +
+  # coord_cartesian(ylim = c(0, 1)) +
+  # ggtitle("Contribution of each genre to the genre \"War\" before and after World War II") +
+  xlab("Start year") +
+  ylab("Share of each genre in all titles of genre \"War\"")
+ggsave("plots/03_hypothesis_genres_war.jpg", width = 10, height = 6)
+
+
+
+
+
+
+
+
+
+
+### BELOW NOT USED ------------------------------------------------------------
 
 ##### ... HOW WAS THE GENRE "WAR" CONNECTED TO OTHER GENRES?
 
@@ -95,15 +167,6 @@ ggsave("plots/03_hypothesis_genres_war.jpg", width = 10, height = 6)
 
 
 
-
-
-
-
-
-
-
-
-# not used:
 ##### ... DID THE CORRELATION PATTERN BETWEEN THE GENRES CHANGE?
 
 all_genres = tb[1:1000000, genres] %>% unlist() %>% unique()
