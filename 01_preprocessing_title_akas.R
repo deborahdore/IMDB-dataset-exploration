@@ -1,7 +1,7 @@
 library(data.table)
 library(ggplot2)
-library(magrittr)
-library(textcat)
+library(dplyr)
+library(cld2)
 
 path <- "//Users/deborah/Documents/IMDB-dataset-exploration/dataset/"
 
@@ -65,8 +65,8 @@ table(ta[,region])
 sum(is.na(ta[,language])) #6290157
 paste0("Percentage of nans in language column is: ", as.integer((sum(is.na(ta[,language]))/nrow(ta))*100), "%")
 table(ta[,language])
-# to do on smaller dataset
-#ta[is.na(language), language := textcat(title)] # detect the language of the title to fill NAs
+# cannot detect every language
+ta[is.na(language), language := detect_language(title)]
 
 # types ----
 sum(is.na(ta[,types])) #28113709
@@ -81,7 +81,6 @@ paste0("Percentage of nans in attributes column is: ", as.integer((sum(is.na(ta$
 ta[,attributes:=NULL]
 
 # isOriginalTitle ----
-# redundant
 sum(is.na(ta$isOriginalTitle))
 ta[,isOriginalTitle:=NULL]
 
