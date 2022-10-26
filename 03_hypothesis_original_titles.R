@@ -228,8 +228,3 @@ ggsave(
   width = 10,
   height = 4
 )
-
-
-
-# SAVE -------------------------------------------------------------------------
-fwrite(original, paste0(path, "/title_original.csv"))
