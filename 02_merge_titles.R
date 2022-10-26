@@ -32,3 +32,24 @@ titles = unique(titles)
 
 fwrite(titles, paste0(path, "/title.merged.csv"))
 
+
+# remove duplicate original titles
+original = titles[types == "original"]
+rm(titles); gc()
+nrow(original) - length(unique(original[, tconst]))  # 164 duplicate tconst
+original[, N := .N, by = tconst]
+original[N > 1, N := lapply(unique(tconst), function(t) {
+  dat = original[tconst == t]
+  keep = dat[, title] == dat[, originalTitle]
+  if (sum(keep) == 1) return(keep)
+  keep = !is.na(dat[, language]) | !is.na(dat[, region])
+  if (sum(keep) == 1) return(keep)
+  keep = !is.na(dat[, language])
+  if (sum(keep) == 1) return(keep)
+  else return(c(TRUE, rep(FALSE, nrow(dat) - 1)))
+}) %>% unlist()]
+original = original[N == 1]
+nrow(original) - length(unique(original[, tconst]))  # now everything is all right
+
+
+fwrite(original, paste0(path, "/title.original.csv"))
