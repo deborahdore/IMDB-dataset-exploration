@@ -50,10 +50,8 @@ original[, genres := strsplit(genres, "\\|")]
 gc()
 
 
-# AFTER WORLD WAR II ...
 
-##### ... DID THE DISTRIBUTION OF GENRES CHANGE?
-
+### GENRES TO ANALYZE ---------------------------------------------------------
 # all_genres = tb[1:1000000, genres] %>% unlist() %>% unique()
 all_genres = c("History", "Drama", "Family", "Music",
                "War", "Romance", "Animation", "Musical",
@@ -70,45 +68,50 @@ all_genres = c("History", "War", "Documentary", "Talk-Show",
                "Drama", "Romance", "Crime", "Comedy",
                "Family", "Animation", "Adventure", "Action")
 
-# create dataframe for plot
+all_genres = c("War", "History", "Family", "Crime",
+               "Talk-Show", "Biography", "Comedy", "Adventure")
+
+
+
+# ### PLOT GENRE AND LANGUAGE ---------------------------------------------------
+# tb_distr = original
+# for (g_col in all_genres) {
+#   tb_distr[, (g_col) := lapply(genres, function(g_row) any(g_row == g_col)) %>% unlist()]
+# }
+# tb_distr = tb_distr[, lapply(.SD, sum), by = .(startYear, titleType, language), .SDcols = all_genres]
+# tb_distr = melt(tb_distr, id.vars = c("startYear", "titleType", "language"), variable.name = "genre", value.name = "count")
+# tb_distr[, total := sum(count), by = .(startYear, language)]
+# tb_distr[, share := count/total]
+# tb_distr[, `:=`(count = NULL, total = NULL)]
+# 
+# tb_distr_nocolor = copy(tb_distr)
+# tb_distr_nocolor[, titleType := NULL]
+# tb_distr_nocolor[, share := sum(share), by = .(startYear, genre, language)]
+# tb_distr_nocolor = unique(tb_distr_nocolor)
+# tb_distr_text = copy(tb_distr_nocolor)
+# tb_distr_text[, startYear := NULL]
+# tb_distr_text[, share := max(share), by = genre]
+# tb_distr_text = unique(tb_distr_text)
+# 
+# ggplot(tb_distr_nocolor, aes(x = startYear, y = share, color = language, alpha = language, size = language)) +
+#   geom_rect(xmin = 1929, xmax = 1945, ymin = 0, ymax = 1.2, alpha = 0.05, fill = "grey20", color = "grey") +
+#   geom_line(alpha = 0.8) +
+#   facet_wrap(~ genre, ncol = 4, scales = "free") +
+#   scale_x_continuous(breaks = seq(1900, 2022, by = 25)) +
+#   scale_color_manual(values = c("brown", "mediumpurple3", "black")) +
+#   scale_alpha_manual(values = c(0.1, 0.2, 1)) +
+#   scale_size_manual(values = c(0.5, 0.5, 1)) +
+#   xlab("Start year") +
+#   ylab("Share of each genre in all titles of one year") +
+#   geom_text(data = tb_distr_text, mapping = aes(x = 1937, y = share * 0.95, label = "1929 - 1945", color = NULL), size = 3) +
+#   theme(axis.title = element_text(size=14,face="bold"))
+# ggsave("plots/03_hypothesis_genres_distribution_language.jpg", width = 14, height = 10)
+
+
+
+### PLOT GENRE AND TITLE TYPE -------------------------------------------------
 tb_distr = original
-for (g_col in all_genres) {
-  tb_distr[, (g_col) := lapply(genres, function(g_row) any(g_row == g_col)) %>% unlist()]
-}
-tb_distr = tb_distr[, lapply(.SD, sum), by = .(startYear, titleType, language), .SDcols = all_genres]
-tb_distr = melt(tb_distr, id.vars = c("startYear", "titleType", "language"), variable.name = "genre", value.name = "count")
-tb_distr[, total := sum(count), by = .(startYear, language)]
-tb_distr[, share := count/total]
-tb_distr[, `:=`(count = NULL, total = NULL)]
-
-tb_distr_nocolor = copy(tb_distr)
-tb_distr_nocolor[, titleType := NULL]
-tb_distr_nocolor[, share := sum(share), by = .(startYear, genre, language)]
-tb_distr_nocolor = unique(tb_distr_nocolor)
-tb_distr_text = copy(tb_distr_nocolor)
-tb_distr_text[, startYear := NULL]
-tb_distr_text[, share := max(share), by = genre]
-tb_distr_text = unique(tb_distr_text)
-
-# plot with language
-ggplot(tb_distr_nocolor, aes(x = startYear, y = share, color = language, alpha = language, size = language)) +
-  geom_rect(xmin = 1929, xmax = 1945, ymin = 0, ymax = 1.2, alpha = 0.05, fill = "grey20", color = "grey") +
-  geom_line(alpha = 0.8) +
-  facet_wrap(~ genre, ncol = 4, scales = "free") +
-  scale_x_continuous(breaks = seq(1900, 2022, by = 25)) +
-  scale_color_manual(values = c("brown", "mediumpurple3", "black")) +
-  scale_alpha_manual(values = c(0.1, 0.2, 1)) +
-  scale_size_manual(values = c(0.5, 0.5, 1)) +
-  xlab("Start year") +
-  ylab("Share of each genre in all titles of one year") +
-  geom_text(data = tb_distr_text, mapping = aes(x = 1937, y = share * 0.95, label = "1929 - 1945", color = NULL), size = 3) +
-  theme(axis.title = element_text(size=14,face="bold"))
-ggsave("plots/03_hypothesis_genres_distribution_language.jpg", width = 14, height = 10)
-
-
-
-# plot with color
-tb_distr = original
+tb_distr = tb_distr[(startYear >= 1920) & (startYear <= 1960)]
 for (g_col in all_genres) {
   tb_distr[, (g_col) := lapply(genres, function(g_row) any(g_row == g_col)) %>% unlist()]
 }
@@ -132,13 +135,13 @@ ggplot(tb_distr, aes(x = startYear, y = share, fill = Type)) +
   geom_rect(xmin = 1929, xmax = 1945, ymin = 0, ymax = 1, alpha = 0.8, fill = "grey60") +
   geom_area(position = "stack", alpha = 0.8) +
   facet_wrap(~ genre, ncol = 4, scales = "free") +
-  scale_x_continuous(breaks = seq(1900, 2022, by = 25)) +
+  scale_x_continuous(breaks = seq(1920, 1960, by = 10)) +
   scale_fill_viridis(discrete = TRUE, option = "D", end = 0.8) +
   xlab("Start year") +
-  ylab("Share of each genre in all titles of one year") +
-  geom_text(data = tb_distr_text, mapping = aes(x = 1937, y = share * 0.95, label = "1929 - 1945", fill = NULL), size = 3) +
+  ylab("Share of selected genres\nin all titles of one year") +
+  geom_text(data = tb_distr_text, mapping = aes(x = 1937, y = share * 0.95, label = "1929 - 1945", fill = NULL), size = 2.5) +
   theme(axis.title = element_text(size=12,face="bold"))
-ggsave("plots/03_hypothesis_genres_distribution_colored.pdf", width = 10, height = 4.5)
+ggsave("plots/03_hypothesis_genres_types.pdf", width = 10, height = 3)
 
 
 

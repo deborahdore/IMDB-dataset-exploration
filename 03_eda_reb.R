@@ -28,6 +28,7 @@ original = original[N == 1]
 original[, N := NULL]
 nrow(original) - length(unique(original[, tconst]))  # now everything is all right
 
+# 1792049 rows
 original[, `:=`(tconst = NULL, title = NULL, isAdult = NULL, runtimeMinutes = NULL, language = NULL, region = NULL)]
 original = original[(!is.na(startYear)) & (startYear <= 2022) & (startYear >= 1897)]  # delete 1245621 rows (13.4%)
 original = original[genres != ""]  # delete 427915 rows (4.6%)
@@ -41,7 +42,11 @@ gc()
 dt_titles = original
 dt_titles = dt_titles[, .N, by = .(startYear, titleType)]
 dt_titles[, share := N/sum(N), by = startYear]
-dt_titles[, Type := titleType]
+dt_titles[, `:=`(Type = titleType, titleType = NULL)]
+dt_titles = merge(data.table("startYear" = rep(1897:2022, each = 4), "Type" = rep(c("movie", "short", "tvMovie", "tvSeries"), length(1897:2022))),
+      dt_titles, by = c("startYear", "Type"), all.x = TRUE)
+dt_titles[is.na(N), N := 0]
+dt_titles[is.na(share), share := 0]
 
 t_abs = ggplot(dt_titles, aes(x = startYear, y = N, fill = Type)) +
   geom_area(position = "stack") +
@@ -63,6 +68,7 @@ t_rel = ggplot(dt_titles, aes(x = startYear, y = share, fill = Type)) +
 rating = ggplot(original[!is.na(averageRating)], aes(x = averageRating, y = ..density..)) +
   geom_histogram(bins = 30, fill = "royalblue4", color = "black") +
   geom_density() +
+  scale_x_continuous(breaks = 1:10) +
   xlab("Average rating of original titles") +
   ylab("Density")
 
@@ -70,19 +76,20 @@ rating = ggplot(original[!is.na(averageRating)], aes(x = averageRating, y = ..de
 votes = ggplot(original[!is.na(numVotes)], aes(x = numVotes, y = ..density..)) +
   geom_histogram(bins = 30, fill = "royalblue4", color = "black") +
   geom_density() +
-  scale_x_continuous(trans = "log10", breaks = c(0, 100, 1000, 10000, 100000)) +
+  scale_x_continuous(trans = "log10", breaks = c(0, 10, 100, 1000, 10000, 100000)) +
   xlab("Number of votes of original titles (log scale)") +
   ylab("Density")
 
 # Connection averageRating and numVotes
-rat_vot = ggplot(original[!is.na(averageRating) & !is.na(numVotes)],
+rat_vot = ggplot(original[!is.na(averageRating) & !is.na(numVotes) & (numVotes > 0)],
        aes(x = numVotes, y = averageRating)) +
-  geom_hex(bins = 10) +
+  geom_hex(bins = 15) +
   xlab("Number of votes of original titles\n(log scale)") +
   ylab("Average rating of original titles") +
   scale_fill_viridis(begin = 0.9, end = 0, trans = log10_trans(), option = "A") +
   # scale_fill_continuous(low = viridis_pal(option = "F")(2)[[2]], high = viridis_pal(option = "F")(2)[[1]], trans = log10_trans()) +
-  scale_x_continuous(trans = "log10", breaks = c(0, 100, 1000, 10000, 100000))
+  scale_x_continuous(trans = "log10", breaks = c(0, 10, 100, 1000, 10000, 100000)) +
+  theme(legend.position = "bottom")
 
 plot_grid(
 plot_grid(t_abs, t_rel,
@@ -92,6 +99,6 @@ plot_grid(rating, votes, ncol = 1),
 plot_grid(ggplot() + theme(panel.border = element_blank()),
           rat_vot,
           ggplot() + theme(panel.border = element_blank()),
-          rel_heights = c(0.3, 1, 0.3), ncol = 1),
+          rel_heights = c(0.1, 1, 0.1), ncol = 1),
 ncol = 3)
-ggsave("plots/EDA.pdf", width = 12, height = 4)
+ggsave("plots/EDA.pdf", width = 10, height = 3.5)
