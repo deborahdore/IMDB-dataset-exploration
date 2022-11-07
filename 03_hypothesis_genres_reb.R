@@ -132,14 +132,14 @@ tb_distr_text[, share := max(share), by = genre]
 tb_distr_text = unique(tb_distr_text)
 
 ggplot(tb_distr, aes(x = startYear, y = share, fill = Type)) +
-  geom_rect(xmin = 1929, xmax = 1945, ymin = 0, ymax = 1, alpha = 0.8, fill = "grey60") +
+  geom_rect(xmin = 1933, xmax = 1945, ymin = 0, ymax = 1, alpha = 0.8, fill = "grey60") +
   geom_area(position = "stack", alpha = 0.8) +
   facet_wrap(~ genre, ncol = 4, scales = "free") +
   scale_x_continuous(breaks = seq(1920, 1960, by = 10)) +
   scale_fill_viridis(discrete = TRUE, option = "D", end = 0.8) +
   xlab("Start year") +
   ylab("Share of selected genres\nin all titles of one year") +
-  geom_text(data = tb_distr_text, mapping = aes(x = 1937, y = share * 0.95, label = "1929 - 1945", fill = NULL), size = 2.5) +
+  geom_text(data = tb_distr_text, mapping = aes(x = 1939, y = share * 0.95, label = "1933 - 1945", fill = NULL), size = 2.5) +
   theme(axis.title = element_text(size=12,face="bold"))
 ggsave("plots/03_hypothesis_genres_types.pdf", width = 10, height = 3)
 
@@ -155,9 +155,9 @@ all_genres = c("Drama", "Short", "Documentary", "Romance", "Comedy", "History", 
 
 
 # create data.table for the plot
-tb_war = rbind(original[(startYear >= 1929) & (startYear <= 1945)],
-               original[(startYear >= 1999) & (startYear <= 2015)])
-tb_war[, Period := ifelse((startYear >= 1929) & (startYear <= 1945), "1929-1945", "1999-2015") %>% factor()]
+tb_war = rbind(original[(startYear >= 1933) & (startYear <= 1945)],
+               original[(startYear >= 2003) & (startYear <= 2015)])
+tb_war[, Period := ifelse((startYear >= 1933) & (startYear <= 1945), "1933-1945", "2003-2015") %>% factor()]
 tb_war = tb_war[lapply(genres, function(g) any(g == "War")) %>% unlist()]
 for (g_col in all_genres) {
   tb_war[, (g_col) := lapply(genres, function(g_row) any(g_row == g_col)) %>% unlist()]
@@ -184,4 +184,4 @@ ggplot(tb_war, aes(x = genre, y = share, fill = language, alpha = Period, label 
   theme(axis.title = element_text(size=12,face="bold"),
         axis.text.x = element_text(angle = 60, vjust = 1, hjust=1)) +
   facet_wrap(~ language, ncol = 3)
-ggsave("plots/03_hypothesis_genres_war_language.pdf", width = 8, height = 2.5)
+ggsave("plots/03_hypothesis_genres_war_language.pdf", width = 10.5, height = 3.5)

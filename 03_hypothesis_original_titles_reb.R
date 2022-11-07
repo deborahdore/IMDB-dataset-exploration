@@ -43,11 +43,11 @@ original_text = rbindlist(list(original_text, original_text, original_text))
 ### PLOT LANGUAGE -------------------------------------------------------------
 original[(startYear >= 1920 & startYear <= 1960), ] %>%
   ggplot(aes(x = startYear, fill = Type)) +
-  annotate("rect", fill = "grey20", alpha = 0.4, xmin = 1929, xmax = 1945, ymin = -Inf, ymax = Inf) +
+  annotate("rect", fill = "grey20", alpha = 0.4, xmin = 1933, xmax = 1945, ymin = -Inf, ymax = Inf) +
   facet_wrap(~ language, scales = "free") +
   scale_fill_viridis(discrete = TRUE, end = 0.8) +
   geom_histogram(binwidth = 1, alpha = 0.8) +
-  geom_text(data = original_text, mapping = aes(x = 1937, y = V1 * 0.9, label = "1929 - 1945", fill = NULL), size = 2.5) +
+  geom_text(data = original_text, mapping = aes(x = 1939, y = V1 * 0.9, label = "1933 - 1945", fill = NULL), size = 2.5) +
   xlab("Start year") +
   ylab("Number of titles") +
   theme(axis.title = element_text(size=12,face="bold"))
@@ -68,7 +68,7 @@ breaks_fun = function(x) {
 
 rating = ggplot(original_mean, aes(x = startYear, y = mean,
                           color = language, size = language, alpha = language)) +
-  annotate("rect", fill = "grey20", alpha = 0.4, xmin = 1929, xmax = 1945, ymin = -Inf, ymax = Inf) +
+  annotate("rect", fill = "grey20", alpha = 0.4, xmin = 1933, xmax = 1945, ymin = -Inf, ymax = Inf) +
   facet_wrap( ~ Type) +
   scale_color_manual(values = c("brown", "mediumpurple3", "black")) +
   scale_size_manual(values = c(0.7, 0.7, 1)) +
