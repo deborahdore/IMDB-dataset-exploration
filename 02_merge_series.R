@@ -13,29 +13,47 @@ titles = fread(paste0(path, "/title.basics_cleaned.csv"))
 akas = fread(paste0(path, "/title.akas_cleaned.csv"))
 ratings = fread(paste0(path, "/title.ratings_clean.csv"))
 episodes = fread(paste0(path, "/title.episode_cleaned.csv"))
+crew = fread(paste0(path, "/title.crew_clean.csv"))
+principals = fread(paste0(path, "/title.principals_clean.csv"))
 
 
-titles = titles[titleType %in% c('tvSeries','tvMiniSeries', 'tvEpisode'), ]
+titles = titles[titleType %in% c('tvSeries','tvMiniSeries'),]
 
-m1 = merge(titles, episodes, by=c("tconst"), all.x=TRUE)
-m2 = merge(m1, ratings, by=c("tconst"), all.x=TRUE)
+dataset = merge(titles, ratings, by=c("tconst"), all.x=TRUE)
 
-rm(m1)
-gc()
+colnames(dataset)[2] <- "types"
 
-colnames(m2)[2] <- "types"
+dataset[,originalTitle:=NULL]
+dataset[,endYear:=NULL]
+dataset = dataset[numVotes > 50, ]
+dataset = dataset[startYear > 2010 & startYear < 2022, ]
+dataset = dataset[averageRating > 3, ]
 
-m2[,originalTitle:=NULL]
-m2[,endYear:=NULL]
+dataset = na.omit(dataset)
+
+dataset_1 = merge(dataset, crew, all.x=TRUE)
+
+principals = principals[category %in% c("actor"), ]
+
+dataset_2 = merge(dataset_1, principals, all.x=TRUE)
+colnames(dataset_2)[14] <- "id_actor"
 
 
-translations = m2 %>% group_by(tconst) %>% tally() %>% ungroup()
+translations = akas %>% group_by(titleId) %>% 
+                    summarise(total_count=n(),.groups = 'drop')
 
-m2 = merge(m2, translations, all.x=TRUE)
-colnames(m2)[13] <- "translations"
+colnames(translations)[1] <- "tconst"
+colnames(translations)[2] <- "nTranslations"
 
-m2 = m2[numVotes > 50, ]
-m2 = m2[startYear > 2010 & startYear < 2022, ]
-m2 = m2[averageRating > 3, ]
+ds = merge(dataset_2, translations, all.x = TRUE)
 
-# todo: number of season
+episodes[, episodeNumber:=NULL]
+
+seasons = episodes %>% group_by(parentTconst) %>% 
+              summarize(nSeasons = max(seasonNumber), .groups = 'drop')
+
+colnames(seasons)[1] <- "tconst"
+
+df = merge(ds, seasons, all.x = TRUE)
+
+fwrite(df, paste0(path, "/merged_series.csv"))
