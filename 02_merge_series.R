@@ -27,7 +27,7 @@ dataset[,originalTitle:=NULL]
 dataset[,endYear:=NULL]
 dataset = dataset[numVotes > 50, ]
 dataset = dataset[startYear > 2010 & startYear < 2022, ]
-dataset = dataset[averageRating > 3, ]
+# dataset = dataset[averageRating > 7, ]
 
 dataset = na.omit(dataset)
 
@@ -55,5 +55,7 @@ seasons = episodes %>% group_by(parentTconst) %>%
 colnames(seasons)[1] <- "tconst"
 
 df = merge(ds, seasons, all.x = TRUE)
+
+df = distinct(df)
 
 fwrite(df, paste0(path, "/merged_series.csv"))
