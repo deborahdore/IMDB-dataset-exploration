@@ -26,7 +26,7 @@ seasons = seasons[(individualRating)]
 k = 5
 seasons_atleastk = seasons
 seasons_atleastk[, maxSeasonNumber := max(seasonNumber), by = parentTconst]
-seasons_atleastk = seasons_atleast10[maxSeasonNumber >= k]
+seasons_atleastk = seasons_atleastk[maxSeasonNumber >= k]
 
 ggplot(seasons_atleastk, aes(x = seasonNumber, y = averageRating, group = parentTconst)) +
   geom_line(alpha = 0.3) +

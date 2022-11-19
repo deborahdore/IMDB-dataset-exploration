@@ -6,7 +6,7 @@ options(scipen = 1000000)
 library(GGally)
 library(viridis)
 
-series = fread("../IMDB-dataset-exploration-data/merged_series.csv")
+series = fread("../IMDB-dataset-exploration-data/merged_series_withNA.csv")
 
 # filter all series that are in the top of ratings, numVotes and nTranslations
 top = 500
@@ -16,10 +16,10 @@ qtrans = quantile(series[, nTranslations], 1 - top/nrow(series))
 series[, success_rating := averageRating >= qrating]
 series[, success_votes := numVotes >= qvotes]
 series[, success_trans := nTranslations >= qtrans]
-series[, success_level := (success_rating + success_votes + success_trans) %>% factor(levels = as.character(0:3))]
+series[, success_level := (success_rating + success_votes) %>% factor(levels = as.character(0:2))]
 # series[, success_level := (success_rating + success_votes) %>% factor(levels = c("2", "1", "0"))]
 series[, success := success_level != "0"]
-series[success_level == 3, .N]
+series[success_level == 2, .N]
 
 #View(series[(success)])
 
