@@ -18,17 +18,26 @@ nodes$actors = rapply(actorsList, function(x) strsplit(x, split = "[|]")) %>%
   as.integer() %>% unique() %>% as.data.frame()
 nodes$group = 1
 
-links = data.table()
+source = c()
+target = c()
 
 for (x in actorsList) {
-  elem = strsplit(as.integer(x), split = "[|]")
-  print(elem)
+  elem = strsplit(x, split = "[|]") %>% as.list()
+  elem = as.integer(unlist(elem))
+  if(length(elem) > 1){
+    for (y in elem){
+      for(k in elem){
+        source <- append(source,y)
+        target <- append(target, k)
+      }
+    }
+  }
 }
 
+links = data.frame(source, target)
+links$value = 1
+links %>% group_by(source, target) %>% summarize(x = sum(value))
 
-
-
-# Plot
-d3ForceNetwork(Links = data.frame(), Nodes = nodes,
+d3ForceNetwork(Links = links, Nodes = nodes,
                Source = "source", Target = "target",
-               NodeID = "actors", Group = "group", opacity = 0.8)
+               NodeID = "actors", value=value, opacity = 0.8)
