@@ -3,14 +3,15 @@ library(plyr)
 library(dplyr)
 library(d3Network)
 library(r2d3)
-library(ggplot2)
+library(ggplot2); theme_set(theme_bw())
 library(forcats)
 library(fmsb)
 library(RColorBrewer)
 library(scales)
 library(stringr)
 
-path = "//Users/deborah/Documents/IMDB-dataset-exploration/dataset/"
+# path = "//Users/deborah/Documents/IMDB-dataset-exploration/dataset/"
+path = "../IMDB-dataset-exploration-data/"
 
 series = fread(paste0(path, "/merged_series_withNA.csv"))
 series = series[success==TRUE]
@@ -46,7 +47,7 @@ nodeActors$group = 1 # actors
 nodeWriters$group = 2 # writers
 nodeDirectors$group = 3 # directors
 
-node = rbind(rbind(nodeActors, nodeWriters), nodeDirectors)
+node = rbind(nodeActors, nodeWriters, nodeDirectors)
 node <- distinct(node, name, .keep_all=TRUE)
 
 node <-node[order(node$name),]
@@ -114,12 +115,18 @@ sink()
 
 # DIRECTORS EXPLORATION --------------------------------------------------------
 
-series = series[, averageRating:=as.integer(averageRating)]
-series = series[, numVotes:=as.integer(numVotes)]
-series = series[, nTranslations:=as.integer(nTranslations)]
+# series[, averageRating:=as.integer(averageRating)]
+# series[, numVotes:=as.integer(numVotes)]
+# series[, nTranslations:=as.integer(nTranslations)]
+# series = series[, weighted_mean:=weighted.mean(c(averageRating,numVotes, nTranslations)),
+#                 by = .(averageRating, numVotes, nTranslations)]
 
-series = series[, weighted_mean:=weighted.mean(c(averageRating,numVotes, nTranslations)),
-                by = .(averageRating, numVotes, nTranslations)]
+
+minmaxscale = function(v) (v - min(v)) / (max(v) - min(v))
+weighted_mean_vec = rowMeans(matrix(c(minmaxscale(series[, averageRating]),
+                       minmaxscale(log10(series[, numVotes])),
+                       minmaxscale(log10(series[, nTranslations]))), ncol = 3))
+series[, weighted_mean := weighted_mean_vec]
 
 series = series[order(-weighted_mean), ]
 
@@ -147,8 +154,8 @@ ggsave("./plots/04_distribution_directors_top_100.pdf", width = 9, height = 5)
 
 # radar 
 
-colors_border <- brewer.pal(5, "BuPu")
-colors_in <- alpha(colors_border,0.3)
+colors_border <- brewer.pal(6, "BuPu")[2:6]
+colors_in <- alpha(colors_border,0.9)
 
 
 top_5 = head(top_100, 5)
@@ -167,14 +174,19 @@ max_top_5 = list("MASSIMO", max(top_5$numVotes),
                  max(top_5$nSeasons))
 
 top_5 = rbindlist(list(max_top_5 , min_top_5 , top_5))
-top_5[,list(numVotes, averageRating, nTranslations, runtimeMinutes, nSeasons)] %>%
+colnames(top_5) = c("primaryTitle", "Number of Votes", "Average Rating", "Number of Translations", "Runtime", "Number of Seasons")
+pdf("plots/04_analysis_radar.pdf", height = 5, width = 8)
+top_5[,list(`Number of Votes`, `Average Rating`, `Number of Translations`, `Runtime`, `Number of Seasons`)] %>%
   radarchart(axistype=0,
-              pcol=colors_border  , plwd=2.5, plty=1.5,
-              cglcol="grey", cglty=1, axislabcol="grey",caxislabels = seq(0, 2, 0.2), 
-             cglwd=0.8,
+              pcol=colors_border, plwd=2.5, plty=1.5,
+              cglcol="grey", cglty=1, axislabcol="grey", caxislabels = seq(0, 2, 0.2), 
+              cglwd=0.8,
               vlcex=0.8
-  ) + legend(x=1, y=1.2, legend = top_5[-c(1,2),primaryTitle],
+  )
+legend(x=1.2, y=1.3, legend = top_5[3:7, primaryTitle],
        bty = "n", pch=20 , col=colors_in , text.col = "black", cex=0.8, pt.cex=3)
+dev.off()
+
 
 # success and failures of directors -------
 
@@ -201,6 +213,7 @@ for (d in directors[,director]){
   directors[director==d, unsuccess:=f]
 }
 
+
 directors = directors[order(-success)] %>% head(50)
 
 directors_new <- melt(directors, id.vars = "director", 
@@ -215,4 +228,42 @@ directors_new %>%
   ylab("total number of series directed")
 
 ggsave("./plots/04_distribution_directors_directors.pdf", width = 10, height = 3.5)
-  
+
+
+
+
+##### CODE WITHOUT STRINGR
+gc()
+series = fread(paste0(path, "/merged_series_withNA.csv"))
+nb = fread(paste0(path, "/name.basics_clean.csv"))
+
+series = series[directors != ""]
+series[, directors := strsplit(directors, "\\|")]
+directorsDT = series[(success), directors] %>% unlist() %>% unique() %>% list() %>% setDT()
+colnames(directorsDT) = "nconst"
+directorsDT[, `:=`(successful = 0, unsuccessful = 0)]
+for (d in directorsDT[, nconst]) {
+  s = series[(success), lapply(directors, function(dfull) d %in% dfull) %>% unlist()] %>% sum()
+  f = series[!(success), lapply(directors, function(dfull) d %in% dfull) %>% unlist()] %>% sum()
+  directorsDT[nconst == d, `:=`(successful = s, unsuccessful = f)]
+}
+directorsDT[, nconst := as.integer(nconst)]
+directorsDT = merge(directorsDT, nb[, .(nconst, primaryName)], by = "nconst", all.x = TRUE)
+directorsDT = directorsDT[successful >= 4]
+directorsDT[, total := successful + unsuccessful]
+directorsDT[, share := successful / total]
+directorsDT = melt(directorsDT, id.vars = c("primaryName", "total", "share"),
+     measure.vars = c("unsuccessful", "successful"),
+     variable.name = "success", value.name = "n")
+
+ggplot(directorsDT, aes(x = reorder(primaryName, -n))) +
+  geom_bar(aes(alpha = success, y = n), stat = "identity", position = "stack", fill = "darkorange3") +
+  geom_text(data = directorsDT[(success == "successful")],
+            aes(label = paste0(round(share, 2)*100, "%"), y = n), nudge_y = -1.5, color = "white", fontface = "bold") +
+  geom_text(data = directorsDT[(success == "successful")],
+            aes(label = round(total, 3), y = total), nudge_y = -1.5, fontface = "bold") +
+  scale_alpha_manual(values = c(0.3, 1), labels = c("no", "yes")) +
+  xlab("Directors of more than 3 successful series") +
+  ylab("Total number of series") +
+  theme(axis.text.x=element_text(angle=40,hjust=1))
+ggsave("plots/04_analysis_BestDirectors.pdf", height = 4, width = 10)

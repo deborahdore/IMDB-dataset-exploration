@@ -40,13 +40,14 @@ series[(success), .N]
 
 ##### PLOT
 
-pal = c("#1aff53", "#1a8cff", "#0073e6", "#0059b3", "#8600b3", "#ac00e6", "#c61aff") %>% rev()
+pal = c("#00e600", "#1a8cff", "#0073e6", "#0059b3", "#8600b3", "#ac00e6", "#c61aff") %>% rev()
 linepal = c("black", adjustcolor("black", alpha.f = 0), adjustcolor("black", alpha.f = 0), "black", adjustcolor("black", alpha.f = 0), adjustcolor("black", alpha.f = 0), "black")
+alpha_level = 0.7
 
 ggpubr::ggarrange(
 # plotting the distribution of the successfull series
 ggplot(series[success_level != "0"], aes(x = averageRating, fill = success_level, color = success_level)) +
-  geom_density(position = "stack", size = 0.7) +
+  geom_density(position = "stack", size = 0.7, alpha = alpha_level) +
   # annotate("rect", fill = "grey80", alpha = 0.4, xmin = 0, xmax = qrating, ymin = -Inf, ymax = Inf) +
   # geom_vline(xintercept = qrating, color = "grey50") +
   coord_cartesian(xlim = c(5, 10)) +
@@ -56,19 +57,9 @@ ggplot(series[success_level != "0"], aes(x = averageRating, fill = success_level
   xlab("Average Rating") +
   theme(legend.title = element_blank(),
         legend.text = element_text(margin = margin(t = 5, b = 5, unit = "pt")))
-  # clear mode at 8-9
-  # "successfull" series with averageRating < 5:
-  # Metástasis (because of translations)
-  # Inhumans (because of votes and translations)
-  # Bizaardvark (because of translations)
-  # Charmed (because of translations)
-  # School (because of translations)
-  # Batwoman (because of votes and translations)
-  # The I-Land (because of votes)
-  # The Walking Dead: World Beyond (because of translations)
 ,
 ggplot(series[success_level != "0"], aes(x = numVotes, fill = success_level, color = success_level)) +
-  geom_density(position = "stack", size = 0.7) +
+  geom_density(position = "stack", size = 0.7, alpha = alpha_level) +
   # annotate("rect", fill = "grey80", alpha = 0.4, xmin = 0, xmax = qvotes, ymin = -Inf, ymax = Inf) +
   # geom_vline(xintercept = qvotes, color = "grey50) +
   scale_x_continuous(trans = "log10") +
@@ -76,11 +67,9 @@ ggplot(series[success_level != "0"], aes(x = numVotes, fill = success_level, col
   scale_color_manual(values = linepal) + guides(color = "none") +
   # ggtitle("Number of Votes") +
   xlab("Number of Votes") + ylab("")
-  # outlier: Game of Thrones with > 2 million votes and Chernobyl with >700.000 votes
-  # still very left skewed
 ,
 ggplot(series[success_level != "0"], aes(x = nTranslations, fill = success_level, color = success_level)) +
-  geom_density(position = "stack", size = 0.7) +
+  geom_density(position = "stack", size = 0.7, alpha = alpha_level) +
   # annotate("rect", fill = "grey80", alpha = 0.4, xmin = 0, xmax = qtrans, ymin = -Inf, ymax = Inf) +
   # geom_vline(xintercept = qtrans, color = "grey50") +
   scale_fill_manual(values = pal) +
@@ -92,4 +81,4 @@ ggplot(series[success_level != "0"], aes(x = nTranslations, fill = success_level
   # bimodal distribution
 , ncol = 4, common.legend = TRUE, legend = "right", widths = c(1, 1, 1, 0.1))
 
- ggsave("plots/04_analysis_successHistogram.pdf", height = 3, width = 12)
+  ggsave("plots/04_analysis_successHistogram.pdf", height = 3, width = 12)

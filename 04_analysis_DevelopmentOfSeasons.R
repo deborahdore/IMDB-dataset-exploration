@@ -68,7 +68,7 @@ ggplot(series[runtimeMinutes <= 200], aes(x = Seasons, y = runtimeMinutes, alpha
   xlab("Number of Seasons") + ylab("") +
   ggtitle("Runtime in Minutes")
 , ncol = 4, common.legend = TRUE, legend = "right")
-ggsave("plots/04_analysis_SeasonsBoxplots.pdf", height = 4, width = 14)
+ggsave("plots/04_analysis_SeasonsBoxplots.pdf", height = 3, width = 14)
 
 # Difference to previous season
 # seasons[, diffRating := NaN]
@@ -139,7 +139,7 @@ ggplot() +
               alpha = 0.2, size = linesize) +
   geom_line(data = season_genres[(seasonNumber <= k) & !(success)],
             mapping = aes(x = seasonNumber, y = averageRatingSeason, group = tconst),
-            alpha = 0.1, key_glyph = draw_key_image) +
+            alpha = 0.1) +
   geom_line(data = season_genres[(seasonNumber <= k) & (success)],
             mapping = aes(x = seasonNumber, y = averageRatingSeason, group = tconst, color = genre),
             alpha = 0.7, size = linesize) +

@@ -36,6 +36,7 @@ ggpubr::ggarrange(
 ggplot(tb, aes(x = genres, y = averageRating, fill = genres, alpha = success)) +
   geom_violin(scale = "width", position = position_dodge(0.5)) +
   scale_alpha_manual(values = c(0.2, 0.8), labels = c("no", "yes")) +
+  scale_fill_viridis(discrete = TRUE, end = 0.85) +
   coord_cartesian(ylim = c(5, 10)) +
   ggtitle("Average Rating") + xlab("") + ylab("") +
   guides(fill = "none") +
@@ -46,12 +47,14 @@ ggplot(tb, aes(x = genres, y = numVotes, fill = genres, alpha = success)) +
   geom_violin(scale = "width", position = position_dodge(0.5)) +
   scale_alpha_manual(values = c(0.2, 0.8)) +
   scale_y_continuous(trans = "log10") +
+  scale_fill_viridis(discrete = TRUE, end = 0.85) +
   ggtitle("Number of Votes") + xlab("") + ylab("") +
   theme(axis.text.x=element_text(angle=40,hjust=1)),
 # translations
 ggplot(tb, aes(x = genres, y = nTranslations, fill = genres, alpha = success)) +
   geom_violin(scale = "width", position = position_dodge(0.5)) +
   scale_alpha_manual(values = c(0.2, 0.8)) +
+  scale_fill_viridis(discrete = TRUE, end = 0.85) +
   coord_cartesian(ylim = c(0, 80)) +
   ggtitle("Number of Translations") + xlab("") + ylab("") +
   theme(axis.text.x=element_text(angle=40,hjust=1)),
@@ -60,6 +63,7 @@ ggplot(tb[runtimeMinutes <= 200], aes(x = genres, y = runtimeMinutes, fill = gen
   geom_violin(scale = "width", position = position_dodge(0.5)) +
   scale_alpha_manual(values = c(0.2, 0.8)) +
   scale_y_continuous(breaks = c(20, 40, 60, 80)) +
+  scale_fill_viridis(discrete = TRUE, end = 0.85) +
   coord_cartesian(ylim = c(0, 100)) +
   ggtitle("Runtime in Minutes") + xlab("") + ylab("") +
   theme(axis.text.x=element_text(angle=40,hjust=1)),
