@@ -67,7 +67,7 @@ for (s in seq_along(distinct_actors)) {
 rm(done)
 
 # colors for grouping vertices by series
-pal = colorRampPalette(brewer.pal(8, "Pastel1"))(110)
+pal = colorRampPalette(brewer.pal(8, "Pastel1"))(100)
 pal = factor(distinct_actors, labels = pal)
 levels(pal) = c(levels(pal), "black"); pal[is.na(pal)] = "black"
 
@@ -80,9 +80,9 @@ plot.igraph(network,
             # mark.groups = distinct_actors,
      # mark.col = distinct_actors,
      # layout=layout.kamada.kawai,
-     vertex.label=series_names,
+     # vertex.label=series_names,
      vertex.label.font = 2, vertex.label.cex = 1.5, vertex.label.color = "black", vertex.label.family = "URWBookman",
-     # vertex.label=NA,
+     vertex.label=NA,
      label.cex = 0.1, label.dist = 1, label.degree = -pi/2,
      # arrow.size = 100,
      # vertex.size=actors_size/4,

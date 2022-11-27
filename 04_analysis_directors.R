@@ -62,7 +62,7 @@ for (s in seq_along(distinct_directors)) {
 rm(done)
 
 # colors for grouping vertices by series
-pal = colorRampPalette(brewer.pal(8, "Pastel1"))(95)
+pal = colorRampPalette(brewer.pal(8, "Pastel1"))(82)
 pal = factor(distinct_directors, labels = pal)
 levels(pal) = c(levels(pal), "black"); pal[is.na(pal)] = "black"
 
@@ -75,11 +75,11 @@ plot.igraph(network,
             # mark.groups = distinct_directors,
             # mark.col = distinct_directors,
             layout=layout.kamada.kawai,
-            vertex.label=series_names,
+            # vertex.label=series_names,
             vertex.label.font = 2, vertex.label.cex = 1.5, vertex.label.color = "black", vertex.label.family = "URWBookman",
-            # vertex.label=NA,
+            vertex.label=NA,
             # arrow.size = 3,
-            edge.color = adjustcolor("darkgray", alpha.f = 0.1),
+            edge.color = adjustcolor("darkgray", alpha.f = 0.2),
             edge.width = 0.1,
             # vertex.size=directors_size/4,
             vertex.size=2, vertex.frame.color = "white",
