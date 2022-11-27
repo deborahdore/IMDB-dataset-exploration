@@ -1,3 +1,6 @@
+.RData
+.RDataTmp
+.Rhistory
 dataset/*
 schemas/.DS_Store
 *.DS_Store
