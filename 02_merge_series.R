@@ -78,11 +78,11 @@ dataset[!is.na(averageRating) & (numVotes >= 50) & !is.na(nTranslations) & !is.n
 dataset = dataset[!is.na(averageRating) & (numVotes >= 50) & !is.na(nTranslations) & !is.na(runtimeMinutes)]
 
 # filter all series that are in the top of ratings, numVotes and nTranslations
-top = 200
+top = 800
 qrating = quantile(dataset[, averageRating], 1 - top/nrow(dataset))
 qvotes = quantile(dataset[, numVotes], 1 - top/nrow(dataset))
 qtrans = quantile(dataset[, nTranslations], 1 - top/nrow(dataset))
-dataset[, success := ((averageRating >= qrating) + (numVotes >= qvotes) & (nTranslations >= qtrans))]
+dataset[, success := ((averageRating >= qrating) & (numVotes >= qvotes) & (nTranslations >= qtrans))]
 dataset[(success), .N]
 View(dataset)
 
