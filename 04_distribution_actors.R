@@ -134,7 +134,7 @@ head(top_100, 40) %>%
   ylab("linear combination of num translations, num votes, averate rating") +
   theme_bw()
 
-ggsave("./plots/top_40.pdf", width = 9, height = 5)
+ggsave("./plots/04_distribution_actors_top_40.pdf", width = 9, height = 5)
 
 
 top_100 %>%
@@ -142,7 +142,7 @@ top_100 %>%
   geom_point(alpha=0.5) +
   scale_size(range = c(.1, 24), name="Translations")
 
-ggsave("./plots/top_100.pdf", width = 9, height = 5)
+ggsave("./plots/04_distribution_actors_top_100.pdf", width = 9, height = 5)
 
 
 # radar 
@@ -214,5 +214,5 @@ directors_new %>%
   xlab("directors") + 
   ylab("total number of series directed")
 
-ggsave("./plots/directors.pdf", width = 10, height = 3.5)
+ggsave("./plots/04_distribution_actors_directors.pdf", width = 10, height = 3.5)
   
