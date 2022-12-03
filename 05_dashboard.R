@@ -1,0 +1,457 @@
+
+library(shiny)
+library(shinydashboard)
+library(data.table)
+library(ggplot2); theme_set(theme_bw())
+options(scipen = 1000000)
+library(magrittr)
+library(ggpubr)
+library(viridis)
+
+path = "../IMDB-dataset-exploration-data/"
+
+series = fread(paste0(path, "/merged_series_withNA.csv"))
+seasons = fread(paste0(path, "/seasons.csv"))
+
+plot_list = list()
+value_list = list()
+
+# topDensity ----
+pal = c("#00e600", "#1a8cff", "#0073e6", "#0059b3", "#8600b3", "#ac00e6", "#c61aff") %>% rev()
+linepal = c("black", adjustcolor("black", alpha.f = 0), adjustcolor("black", alpha.f = 0), "black", adjustcolor("black", alpha.f = 0), adjustcolor("black", alpha.f = 0), "black")
+alpha_level = 0.7
+for (top in seq(100, 1000, 100)) {
+  qrating = quantile(series[, averageRating], 1 - top/nrow(series))
+  qvotes = quantile(series[, numVotes], 1 - top/nrow(series))
+  qtrans = quantile(series[, nTranslations], 1 - top/nrow(series))
+  series[, success_rating := averageRating >= qrating]
+  series[, success_votes := numVotes >= qvotes]
+  series[, success_trans := nTranslations >= qtrans]
+  series[, success_level := ifelse((averageRating >= qrating) & (numVotes >= qvotes) & (nTranslations >= qtrans), 7,
+                                   ifelse((averageRating >= qrating) & (numVotes >= qvotes) & !(nTranslations >= qtrans), 6,
+                                          ifelse((averageRating >= qrating) & !(numVotes >= qvotes) & (nTranslations >= qtrans), 5,
+                                                 ifelse(!(averageRating >= qrating) & (numVotes >= qvotes) & (nTranslations >= qtrans), 4,
+                                                        ifelse((averageRating >= qrating) & !(numVotes >= qvotes) & !(nTranslations >= qtrans), 3,
+                                                               ifelse(!(averageRating >= qrating) & (numVotes >= qvotes) & !(nTranslations >= qtrans), 2,
+                                                                      ifelse(!(averageRating >= qrating) & !(numVotes >= qvotes) & (nTranslations >= qtrans), 1,
+                                                                             0)))))))]
+  series[, success := success_level == 7]
+  series[, success_level := factor(success_level, levels = 0:7,
+                                   labels = c(paste0("SUCCESSFULL:\nin top ", top, " ratings &\nin top ", top, " votes &\nin top ", top, " translations"),
+                                              paste0("in top ", top, " ratings &\nin top ", top, " votes"),
+                                              paste0("in top ", top, " ratings &\nin top ", top, " translations"),
+                                              paste0("in top ", top, " votes &\nin top ", top, " translations"),
+                                              paste0("in top ", top, " ratings"),
+                                              paste0("in top ", top, " votes"),
+                                              paste0("in top ", top, " translations"), "0") %>% rev())]
+  
+  p = ggarrange(
+    # plotting the distribution of the successfull series
+    ggplot(series[success_level != "0"], aes(x = averageRating, fill = success_level, color = success_level)) +
+      geom_density(position = "stack", size = 0.7, alpha = alpha_level) +
+      # annotate("rect", fill = "grey80", alpha = 0.4, xmin = 0, xmax = qrating, ymin = -Inf, ymax = Inf) +
+      # geom_vline(xintercept = qrating, color = "grey50") +
+      coord_cartesian(xlim = c(5, 10)) +
+      scale_fill_manual(values = pal) +
+      scale_color_manual(values = linepal) + guides(color = "none") +
+      # ggtitle("Ratings") +
+      xlab("Average Rating") +
+      theme(legend.title = element_blank(),
+            legend.text = element_text(margin = margin(t = 5, b = 5, unit = "pt")))
+    ,
+    ggplot(series[success_level != "0"], aes(x = numVotes, fill = success_level, color = success_level)) +
+      geom_density(position = "stack", size = 0.7, alpha = alpha_level) +
+      # annotate("rect", fill = "grey80", alpha = 0.4, xmin = 0, xmax = qvotes, ymin = -Inf, ymax = Inf) +
+      # geom_vline(xintercept = qvotes, color = "grey50) +
+      scale_x_continuous(trans = "log10") +
+      scale_fill_manual(values = pal) +
+      scale_color_manual(values = linepal) + guides(color = "none") +
+      # ggtitle("Number of Votes") +
+      xlab("Number of Votes") + ylab("")
+    ,
+    ggplot(series[success_level != "0"], aes(x = nTranslations, fill = success_level, color = success_level)) +
+      geom_density(position = "stack", size = 0.7, alpha = alpha_level) +
+      # annotate("rect", fill = "grey80", alpha = 0.4, xmin = 0, xmax = qtrans, ymin = -Inf, ymax = Inf) +
+      # geom_vline(xintercept = qtrans, color = "grey50") +
+      scale_fill_manual(values = pal) +
+      scale_color_manual(values = linepal) + guides(color = "none") +
+      # ggtitle("Number of Translations") +
+      xlab("Number of Translations") + ylab("") +
+      scale_x_continuous(breaks = seq(0, 80, 20)) +
+      coord_cartesian(xlim = c(0, 80)) 
+    # bimodal distribution
+    , ncol = 4, common.legend = TRUE, legend = "right", widths = c(1, 1, 1, 0.1))
+  
+  plot_list[[paste0("topDensity_", top)]] = p
+  value_list[[paste0("topDensity_", top)]] = series[(success), .N]
+  
+  series[, success_level := NULL]
+}
+
+# seasonsViolin ----
+colnames(seasons)[[2]] = "tconst"
+seasons = seasons[tconst %in% series[, tconst]]
+seasons = merge(seasons[, .(ID, tconst, seasonNumber, nEpisodes, averageRuntimeMinutes, genres, numVotes, averageRating, minRating, maxRating)],
+                series[, .(tconst, primaryTitle, success, averageRating, numVotes, runtimeMinutes, nTranslations, nSeasons, maxSeasonNumber, startYear)],
+                by = "tconst", suffixes = c("Season", "Series"))
+seasons[(success), tconst] %>% unique() %>% length()
+seasons = seasons[maxSeasonNumber == nSeasons]
+series_seasons = unique(seasons[, .(tconst, primaryTitle, success, averageRatingSeries, numVotesSeries, runtimeMinutes, nTranslations, nSeasons, startYear)])
+series_seasons[, Seasons := ifelse(nSeasons == 1, "1", ifelse(nSeasons %in% 2:4, "2-4", ifelse(nSeasons %in% 5:7, "5-7", ifelse(nSeasons %in% 8:12, "8-12", "13+"))))]
+series_seasons[, Seasons := factor(Seasons, levels = c("1", "2-4", "5-7", "8-12", "13+"))]
+seasons[, individualRating := (sd(averageRatingSeason, na.rm = TRUE) != 0), by = tconst]
+seasons = seasons[(individualRating)][, individualRating := NULL]
+
+plot_list$seasonsViolin_TRUE = ggpubr::ggarrange(
+  ggplot(series_seasons, aes(x = Seasons, y = averageRatingSeries, alpha = success)) +
+    scale_alpha_manual(values = c(0.2, 0.8),
+                       labels = c("no", "yes")) +
+    geom_violin(scale = "width", fill = "#4d0099", position = position_dodge(0.5)) +
+    xlab("Number of Seasons") + ylab("") +
+    ggtitle("Average Rating")
+  ,
+  ggplot(series_seasons, aes(x = Seasons, y = numVotesSeries, alpha = success)) +
+    scale_y_continuous(trans = "log10") +
+    scale_alpha_manual(values = c(0.2, 0.8),
+                       labels = c("no", "yes")) +
+    geom_violin(scale = "width", fill = "#4d0099", position = position_dodge(0.5)) +
+    xlab("Number of Seasons") + ylab("") +
+    ggtitle("Number of Votes")
+  ,
+  ggplot(series_seasons, aes(x = Seasons, y = nTranslations, alpha = success)) +
+    scale_alpha_manual(values = c(0.2, 0.8),
+                       labels = c("no", "yes")) +
+    geom_violin(scale = "width", fill = "#4d0099", position = position_dodge(0.5)) +
+    coord_cartesian(ylim = c(0, 80)) +
+    xlab("Number of Seasons") + ylab("") +
+    ggtitle("Number of Translations")
+  ,
+  ggplot(series_seasons[runtimeMinutes <= 200], aes(x = Seasons, y = runtimeMinutes, alpha = success)) +
+    scale_alpha_manual(values = c(0.2, 0.8),
+                       labels = c("no", "yes")) +
+    geom_violin(scale = "width", fill = "#4d0099", position = position_dodge(0.5)) +
+    coord_cartesian(ylim = c(0, 100)) +
+    xlab("Number of Seasons") + ylab("") +
+    ggtitle("Runtime in Minutes")
+  , ncol = 4, common.legend = TRUE, legend = "right")
+
+plot_list$seasonsViolin_FALSE = ggpubr::ggarrange(
+  ggplot(series_seasons, aes(x = Seasons, y = averageRatingSeries)) +
+    geom_violin(scale = "width", fill = "#4d0099", position = position_dodge(0.5), alpha = 0.2) +
+    xlab("Number of Seasons") + ylab("") +
+    ggtitle("Average Rating")
+  ,
+  ggplot(series_seasons, aes(x = Seasons, y = numVotesSeries)) +
+    scale_y_continuous(trans = "log10") +
+    geom_violin(scale = "width", fill = "#4d0099", position = position_dodge(0.5), alpha = 0.2) +
+    xlab("Number of Seasons") + ylab("") +
+    ggtitle("Number of Votes")
+  ,
+  ggplot(series_seasons, aes(x = Seasons, y = nTranslations)) +
+    geom_violin(scale = "width", fill = "#4d0099", position = position_dodge(0.5), alpha = 0.2) +
+    coord_cartesian(ylim = c(0, 80)) +
+    xlab("Number of Seasons") + ylab("") +
+    ggtitle("Number of Translations")
+  ,
+  ggplot(series_seasons[runtimeMinutes <= 200], aes(x = Seasons, y = runtimeMinutes)) +
+    geom_violin(scale = "width", fill = "#4d0099", position = position_dodge(0.5), alpha = 0.2) +
+    coord_cartesian(ylim = c(0, 100)) +
+    xlab("Number of Seasons") + ylab("") +
+    ggtitle("Runtime in Minutes"),
+  ggplot() + theme(panel.border = element_blank())
+  , ncol = 5, widths = c(1, 1, 1, 1, 0.2))
+
+
+# genresBar ----
+tb = fread(paste0(path, "/merged_series_withNA.csv"))
+tb[, genres := strsplit(genres, "\\|")]
+all_genres = tb[1:100000, genres] %>% unlist() %>% unique()
+all_genres = all_genres[all_genres != "Western"]
+# all_genres = c("Action", "Adventure", "Crime", "Mystery", "Drama", "Animation", "Sci-Fi", "Thriller", "Fantasy", "Comedy", "Romance")
+for (g_col in all_genres) {tb[, (g_col) := lapply(genres, function(g_row) any(g_row == g_col)) %>% unlist()]}
+tb = melt(tb, id.vars = c("tconst", "success", "runtimeMinutes", "averageRating", "numVotes", "nTranslations"),
+          measure.vars = all_genres,
+          variable.name = "genres", value.name = "count")
+tb = tb[(count == TRUE)]
+tb[, count := NULL]
+tb[, total := .N, by = genres]
+tb[, total_success := .N, by = .(genres, success)]
+tb[, share := total_success/total]
+tb = unique(tb[, .(success, genres, total, total_success, share)])
+tb[, genres := factor(genres, levels = tb[(success)][order(-share), genres])]
+fun_genresBar = function(all_genres, tb) {
+  ggpubr::ggarrange(
+    ggplot(tb[(success) & (genres %in% all_genres)], aes(x = reorder(genres, genres), y = share, fill = genres,
+                              label = paste0(" ", round(share, 3) * 100, "%"))) +
+      geom_bar(aes(color = genres), stat = "identity", alpha = 0.7) +
+      geom_text(nudge_y = 0.0007) +
+      xlab("") + ylab("") +
+      scale_y_continuous(breaks = c(0.005, 0.01, 0.015), labels = c("0.5%", "1%", "1.5%")) +
+      scale_fill_viridis(discrete = TRUE) +
+      scale_color_viridis(discrete = TRUE) +
+      ggtitle("Share of successfull series in each genre") +
+      theme(axis.text.x=element_text(angle=40,hjust=1),
+            legend.position = "none")
+    ,
+    ggplot(tb[(success) & (genres %in% all_genres)], aes(x = genres, y = total_success, fill = genres,
+                              label = total_success)) +
+      geom_bar(aes(color = genres), stat = "identity", alpha = 0.7) +
+      geom_text(nudge_y = 3) +
+      xlab("") + ylab("") +
+      scale_fill_viridis(discrete = TRUE) +
+      scale_color_viridis(discrete = TRUE) +
+      ggtitle("Number of successfull series in each genre") +
+      theme(axis.text.x=element_text(angle=40,hjust=1),
+            legend.position = "none")
+    , ncol = 2)
+}
+
+# genresViolin ---- 
+tb2 = fread(paste0(path, "/merged_series_withNA.csv"))
+tb2[, genres := strsplit(genres, "\\|")]
+all_genres = tb2[1:100000, genres] %>% unlist() %>% unique() %>% sort()
+for (g_col in all_genres) {tb2[, (g_col) := lapply(genres, function(g_row) any(g_row == g_col)) %>% unlist()]}
+tb2 = melt(tb2, id.vars = c("tconst", "success", "runtimeMinutes", "averageRating", "numVotes", "nTranslations"),
+          measure.vars = all_genres,
+          variable.name = "genres", value.name = "count")
+tb2 = tb2[(count == TRUE)]
+tb2[, count := NULL]
+fun_genresViolin = function(all_genres, tb2) {
+ggpubr::ggarrange(
+  # rating
+  ggplot(tb2[(genres %in% all_genres)], aes(x = genres, y = averageRating, fill = genres, alpha = success)) +
+    geom_violin(scale = "width", position = position_dodge(0.5)) +
+    scale_alpha_manual(values = c(0.2, 0.8), labels = c("no", "yes")) +
+    scale_fill_viridis(discrete = TRUE, end = 0.85) +
+    coord_cartesian(ylim = c(5, 10)) +
+    ggtitle("Average Rating") + xlab("") + ylab("") +
+    guides(fill = "none") +
+    guides(alpha = guide_legend(override.aes = list(fill = "grey50"))) +
+    theme(axis.text.x=element_text(angle=40,hjust=1)),
+  # votes
+  ggplot(tb2[(genres %in% all_genres)], aes(x = genres, y = numVotes, fill = genres, alpha = success)) +
+    geom_violin(scale = "width", position = position_dodge(0.5)) +
+    scale_alpha_manual(values = c(0.2, 0.8)) +
+    scale_y_continuous(trans = "log10") +
+    scale_fill_viridis(discrete = TRUE, end = 0.85) +
+    ggtitle("Number of Votes") + xlab("") + ylab("") +
+    theme(axis.text.x=element_text(angle=40,hjust=1)),
+  # translations
+  ggplot(tb2[(genres %in% all_genres)], aes(x = genres, y = nTranslations, fill = genres, alpha = success)) +
+    geom_violin(scale = "width", position = position_dodge(0.5)) +
+    scale_alpha_manual(values = c(0.2, 0.8)) +
+    scale_fill_viridis(discrete = TRUE, end = 0.85) +
+    coord_cartesian(ylim = c(0, 80)) +
+    ggtitle("Number of Translations") + xlab("") + ylab("") +
+    theme(axis.text.x=element_text(angle=40,hjust=1)),
+  # run time
+  ggplot(tb2[(runtimeMinutes <= 200) & (genres %in% all_genres)], aes(x = genres, y = runtimeMinutes, fill = genres, alpha = success)) +
+    geom_violin(scale = "width", position = position_dodge(0.5)) +
+    scale_alpha_manual(values = c(0.2, 0.8)) +
+    scale_y_continuous(breaks = c(20, 40, 60, 80)) +
+    scale_fill_viridis(discrete = TRUE, end = 0.85) +
+    coord_cartesian(ylim = c(0, 100)) +
+    ggtitle("Runtime in Minutes") + xlab("") + ylab("") +
+    theme(axis.text.x=element_text(angle=40,hjust=1)),
+  ncol = 4, common.legend = TRUE, legend = "right", widths = c(1, 1.2, 1, 1))
+}
+
+
+# genresLine ----
+season_genres = seasons
+season_genres[, genres := strsplit(genres, "\\|")]
+all_genres2 = c("Action", "Crime", "Mystery", "Drama", "Sci-Fi", "Comedy")
+for (g_col in all_genres) {
+  season_genres[, (g_col) := lapply(genres, function(g_row) any(g_row == g_col)) %>% unlist()]
+}
+season_genres = melt(season_genres,
+                     id.vars = c("tconst", "seasonNumber", "maxSeasonNumber", "averageRatingSeason", "success", "numVotesSeason", "averageRuntimeMinutes", "nTranslations"),
+                     measure.vars = all_genres2,
+                     variable.name = "genre", value.name = "genreBool")
+season_genres = season_genres[(genreBool)][, genreBool := NULL]
+linesize = 0.5
+for (k in 2:15) {
+p = ggpubr::ggarrange(
+  # average Rating
+  ggplot() +
+    geom_violin(data = season_genres[(seasonNumber <= k) & !(success)],
+                mapping = aes(x = seasonNumber, group = seasonNumber, y = averageRatingSeason)) +
+    geom_violin(data = season_genres[(seasonNumber <= k) & (success)],
+                mapping = aes(x = seasonNumber, group = seasonNumber, y = averageRatingSeason, color = genre, fill = genre),
+                alpha = 0.2, size = linesize) +
+    geom_line(data = season_genres[(seasonNumber <= k) & !(success)],
+              mapping = aes(x = seasonNumber, y = averageRatingSeason, group = tconst),
+              alpha = 0.1) +
+    geom_line(data = season_genres[(seasonNumber <= k) & (success)],
+              mapping = aes(x = seasonNumber, y = averageRatingSeason, group = tconst, color = genre),
+              alpha = 0.7, size = linesize) +
+    scale_x_continuous(breaks = 1:k) +
+    scale_fill_viridis(discrete = TRUE, end = 0.85) +
+    scale_color_viridis(discrete = TRUE, end = 0.85) +
+    ylab("Average Rating\nof Episode") + xlab("") +
+    facet_wrap(~ genre, ncol = 6) +
+    theme(legend.position = "none"),
+  # number of votes
+  ggplot() +
+    geom_violin(data = season_genres[(seasonNumber <= k) & !(success)],
+                mapping = aes(x = seasonNumber, group = seasonNumber, y = numVotesSeason)) +
+    geom_violin(data = season_genres[(seasonNumber <= k) & (success)],
+                mapping = aes(x = seasonNumber, group = seasonNumber, y = numVotesSeason, color = genre, fill = genre),
+                alpha = 0.2, size = linesize) +
+    geom_line(data = season_genres[(seasonNumber <= k) & !(success)],
+              mapping = aes(x = seasonNumber, y = numVotesSeason, group = tconst),
+              alpha = 0.1) +
+    geom_line(data = season_genres[(seasonNumber <= k) & (success)],
+              mapping = aes(x = seasonNumber, y = numVotesSeason, group = tconst, color = genre),
+              alpha = 0.7, size = linesize) +
+    scale_x_continuous(breaks = 1:k) +
+    scale_y_continuous(trans = "log10") +
+    scale_fill_viridis(discrete = TRUE, end = 0.85) +
+    scale_color_viridis(discrete = TRUE, end = 0.85) +
+    ylab("Average Number of Votes\nof Episodes") + xlab("") +
+    facet_wrap(~ genre, ncol = 6) +
+    theme(legend.position = "none"),
+  # run time
+  ggplot() +
+    geom_violin(data = season_genres[(seasonNumber <= k) & !(success)],
+                mapping = aes(x = seasonNumber, group = seasonNumber, y = averageRuntimeMinutes)) +
+    geom_violin(data = season_genres[(seasonNumber <= k) & (success)],
+                mapping = aes(x = seasonNumber, group = seasonNumber, y = averageRuntimeMinutes, color = genre, fill = genre),
+                alpha = 0.2, size = linesize) +
+    geom_line(data = season_genres[(seasonNumber <= k) & !(success)],
+              mapping = aes(x = seasonNumber, y = averageRuntimeMinutes, group = tconst),
+              alpha = 0.1) +
+    geom_line(data = season_genres[(seasonNumber <= k) & (success)],
+              mapping = aes(x = seasonNumber, y = averageRuntimeMinutes, group = tconst, color = genre),
+              alpha = 0.7, size = linesize) +
+    scale_x_continuous(breaks = 1:k) +
+    scale_y_continuous(breaks = c(20, 40, 60, 80)) +
+    scale_fill_viridis(discrete = TRUE, end = 0.85) +
+    scale_color_viridis(discrete = TRUE, end = 0.85) +
+    ylab("Average Runtime\nof Episodes in Minutes") + xlab("Season Number") +
+    coord_cartesian(ylim = c(0, 100)) +
+    facet_wrap(~ genre, ncol = 6) +
+    theme(legend.position = "none"),
+  ncol = 1)
+
+plot_list[[paste0("genresLine_", k)]] = p
+}
+
+
+##### USER INTERFACE ##########################################################
+
+ui <- fluidPage(
+  
+  dashboardPage(
+    
+    dashboardHeader(title = "IMDB Analysis"),
+    
+    dashboardSidebar(sidebarMenu(id = "menu", sidebarMenuOutput("menu"))),
+    
+    dashboardBody(
+      tabItems(
+        tabItem(tabName = "success",
+                fluidRow(
+                  box(width = 12, solidHeader = TRUE, status = "primary",
+                      title = "Correlations",
+                      "correlation plots")
+                ),
+                fluidRow(
+                  box(width = 12, solidHeader = TRUE, status = "primary",
+                      title = textOutput("topDensity_text"),
+                      column(width = 3,
+                             sliderInput(inputId = "topDensity",
+                                         label = "How many of the best in ratings, votes and translations?",
+                                         value = 800, min = 300, max = 1000, step = 100)
+                      ),
+                      column(width = 9,  plotOutput("topDensity"))
+                  )
+                )
+        ),
+        tabItem(tabName = "seasons",
+                fluidRow(
+                  box(width = 12, solidHeader = TRUE, status = "primary",
+                      title = "Total number of Seasons",
+                      column(width = 1,
+                             checkboxInput(inputId = "seasonsViolin",
+                                           label = "distinction by success", value = FALSE)
+                      ),
+                      column(width = 11, plotOutput("seasonsViolin"))
+                  )
+                )
+        ),
+        tabItem(tabName = "genres",
+                fluidRow(
+                  box(width = 12, solidHeader = TRUE, status = "primary",
+                      column(width = 1,
+                             checkboxGroupInput(inputId = "genresBar", label = "Genres",
+                                                choices = all_genres %>% sort(),
+                                                selected = c("Action", "Adventure", "Crime", "Mystery", "Drama", "Animation", "Sci-Fi", "Thriller", "Fantasy", "Comedy", "Romance"))
+                      ),
+                      column(width = 11, plotOutput("genresBar"))
+                  )
+                ),
+                fluidRow(
+                  box(width = 12, solidHeader = TRUE, status = "primary",
+                      column(width = 1,
+                             checkboxGroupInput(inputId = "genresViolin", label = "Genres",
+                                                choices = all_genres %>% sort(),
+                                                selected = c("Action", "Crime", "Mystery", "Drama", "Sci-Fi", "Comedy"))
+                      ),
+                      column(width = 11, plotOutput("genresViolin"))
+                      )
+                )
+        ),
+        tabItem(tabName = "genresSeasons",
+                fluidRow(
+                  box(width = 12, solidHeader = TRUE, status = "primary",
+                      column(width = 2,
+                             sliderInput(inputId = "genresLine",
+                                         label = "Until which season?",
+                                         value = 8, min = 2, max = 15, step = 1)
+                      ),
+                      column(width = 10, plotOutput("genresLine", height = "600px"))
+                  )
+                )
+        )
+      )
+    )
+  )
+)
+    
+    
+
+##### SERVER ##################################################################
+
+server <- function(input, output) {
+  
+  output$menu = renderMenu({
+    sidebarMenu(
+      menuItem("What is success?", tabName = "success"),
+      menuItem("Seasons", tabName = "seasons"),
+      menuItem("Genres", tabName = "genres"),
+      menuItem("Genres and Seasons", tabName = "genresSeasons")
+    )
+  })
+  
+  output$topDensity_text = renderText({
+    paste0(value_list[[paste0("topDensity_", input$topDensity)]],
+                " successful series")
+    })
+  
+  output$topDensity = renderPlot(plot_list[[paste0("topDensity_", input$topDensity)]])
+ 
+  output$seasonsViolin = renderPlot(plot_list[[paste0("seasonsViolin_", input$seasonsViolin)]])
+  
+  output$genresBar = renderPlot(fun_genresBar(all_genres = input$genresBar, tb))
+  
+  output$genresViolin = renderPlot(fun_genresViolin(all_genres = input$genresViolin, tb2))
+  
+  output$genresLine = renderPlot(plot_list[[paste0("genresLine_", input$genresLine)]])
+}
+
+
+##### SHINY APP ###############################################################
+
+shinyApp(ui = ui, server = server)
+
