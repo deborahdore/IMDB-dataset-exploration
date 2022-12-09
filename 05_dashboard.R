@@ -7,6 +7,8 @@ options(scipen = 1000000)
 library(magrittr)
 library(ggpubr)
 library(viridis)
+library(igraph)
+library(fmsb)
 
 # source("05_dashboard_prepare.R")
 load("05_dashboard_workspace.rda")
@@ -28,11 +30,6 @@ ui <- fluidPage(
         tabItem(tabName = "success",
                 fluidRow(
                   box(width = 12, solidHeader = TRUE, status = "primary",
-                      title = "Correlations",
-                      "correlation plots")
-                ),
-                fluidRow(
-                  box(width = 12, solidHeader = TRUE, status = "primary",
                       title = textOutput("topDensity_text"),
                       column(width = 3,
                              sliderInput(inputId = "topDensity",
@@ -40,6 +37,20 @@ ui <- fluidPage(
                                          value = 800, min = 300, max = 1000, step = 100)
                       ),
                       column(width = 9,  plotOutput("topDensity"))
+                  )
+                )
+        ),
+        tabItem(tabName = "radar",
+                fluidRow(
+                  box(width = 12, solidHeader = TRUE, status = "primary",
+                      column(width = 3,
+                             selectInput(inputId = "radar1", choices = top_5$primaryTitle %>% sort(), selected = "Game of Thrones", label = "Series 1"),
+                             selectInput(inputId = "radar2", choices = top_5$primaryTitle %>% sort(), selected = "Sherlock", label = "Series 2"),
+                             selectInput(inputId = "radar3", choices = top_5$primaryTitle %>% sort(), selected = "Rick and Morty", label = "Series 3"),
+                             selectInput(inputId = "radar4", choices = top_5$primaryTitle %>% sort(), selected = "Stranger Things", label = "Series 4"),
+                             selectInput(inputId = "radar5", choices = top_5$primaryTitle %>% sort(), selected = "True Detective", label = "Series 5")
+                      ),
+                      column(width = 9, plotOutput("radarPlot", height = "600px"))
                   )
                 )
         ),
@@ -88,7 +99,33 @@ ui <- fluidPage(
                       column(width = 10, plotOutput("genresLine", height = "600px"))
                   )
                 )
-        )
+        ),
+        tabItem(tabName = "networks",
+                fluidRow(
+                  box(width = 12, solidHeader = TRUE, status = "primary",
+                      title = "Actors of successful series",
+                      column(width = 2,
+                             selectInput(inputId = "networkActors",
+                                         label = "Genre to color by",
+                                         choices = all_genres %>% sort(),
+                                         selected = "Drama")
+                             ),
+                      column(width = 10, plotOutput("networkActors", height = "800px"))
+                      )
+                ),
+                fluidRow(
+                  box(width = 12, solidHeader = TRUE, status = "primary",
+                      title = "Directors of successful series",
+                      column(width = 2,
+                             selectInput(inputId = "networkDirectors",
+                                         label = "Genre to color by",
+                                         choices = all_genres %>% sort(),
+                                         selected = "Drama")
+                             ),
+                      column(width = 10, plotOutput("networkDirectors", height = "800px"))
+                      )
+                )
+                )
       )
     )
   )
@@ -103,9 +140,11 @@ server <- function(input, output) {
   output$menu = renderMenu({
     sidebarMenu(
       menuItem("What is success?", tabName = "success"),
+      menuItem("Radar Plot", tabName = "radar"),
       menuItem("Seasons", tabName = "seasons"),
       menuItem("Genres", tabName = "genres"),
-      menuItem("Genres and Seasons", tabName = "genresSeasons")
+      menuItem("Genres and Seasons", tabName = "genresSeasons"),
+      menuItem("Networks", tabName = "networks")
     )
   })
   
@@ -115,6 +154,8 @@ server <- function(input, output) {
     })
   
   output$topDensity = renderPlot(plot_list[[paste0("topDensity_", input$topDensity)]])
+  
+  output$radarPlot = renderPlot(fun_radarPlot(titles = c(input$radar1, input$radar2, input$radar3, input$radar4, input$radar5), top_5 = top_5))
  
   output$seasonsViolin = renderPlot(plot_list[[paste0("seasonsViolin_", input$seasonsViolin)]])
   
@@ -123,6 +164,16 @@ server <- function(input, output) {
   output$genresViolin = renderPlot(fun_genresViolin(all_genres = input$genresViolin, tb2))
   
   output$genresLine = renderPlot(plot_list[[paste0("genresLine_", input$genresLine)]])
+  
+  output$networkActors = renderPlot({set.seed(345); plot.igraph(network_actors,
+                                                vertex.label=NA,
+                                                vertex.size=2, vertex.frame.color = "white",
+                                                vertex.color = ifelse(value_list[[paste0("networkActors_", input$networkActors)]], "purple4", "grey70"))})
+  
+  output$networkDirectors = renderPlot({set.seed(345); plot.igraph(network_directors,
+                                                vertex.label=NA,
+                                                vertex.size=2, vertex.frame.color = "white",
+                                                vertex.color = ifelse(value_list[[paste0("networkDirectors_", input$networkDirectors)]], "olivedrab4", "grey70"))})
 }
 
 

@@ -4,18 +4,21 @@ library(shinydashboard)
 library(data.table)
 library(ggplot2); theme_set(theme_bw())
 options(scipen = 1000000)
-library(magrittr)
 library(ggpubr)
 library(viridis)
+library(dplyr)
+library(igraph)
+library(RColorBrewer)
+library(fmsb)
 
 
 path = "../IMDB-dataset-exploration-data/"
 
 series = fread(paste0(path, "/merged_series_withNA.csv"))
-seasons = fread(paste0(path, "/seasons.csv"))
 
 plot_list = list()
 value_list = list()
+
 
 # topDensity ----
 pal = c("#00e600", "#1a8cff", "#0073e6", "#0059b3", "#8600b3", "#ac00e6", "#c61aff") %>% rev()
@@ -89,7 +92,51 @@ for (top in seq(100, 1000, 100)) {
   series[, success_level := NULL]
 }
 
+
+
+# histo ----
+
+
+
+
+# radarPlot ----
+series = fread(paste0(path, "/merged_series_withNA.csv"))
+series = series[success==TRUE]
+colors_border <- brewer.pal(6, "BuPu")[2:6]
+colors_in <- alpha(colors_border,0.9)
+top_5 = series[, log_numVotes := log10(numVotes)]
+top_5 = series[,list(primaryTitle, log_numVotes, averageRating, nTranslations, runtimeMinutes, nSeasons)]
+fun_radarPlot = function(titles, top_5) {
+  min_top_5 = list("MINIMO",
+                   min(top_5$log_numVotes),
+                   min(top_5$averageRating),
+                   min(top_5$nTranslations),
+                   min(top_5$runtimeMinutes),
+                   min(top_5$nSeasons))
+  max_top_5 = list("MASSIMO", max(top_5$log_numVotes),
+                   max(top_5$averageRating),
+                   max(top_5$nTranslations),
+                   100, #max(top_5$runtimeMinutes),
+                   max(top_5$nSeasons))
+  top_5 = merge(data.frame("primaryTitle" = titles), top_5, all.x = TRUE, all.y = FALSE)
+  top_5 = rbindlist(list(max_top_5 , min_top_5 , top_5))
+  colnames(top_5) = c("primaryTitle", "Number of Votes", "Average Rating", "Number of Translations", "Runtime", "Number of Seasons")
+  top_5[,list(`Number of Votes`, `Average Rating`, `Number of Translations`, `Runtime`, `Number of Seasons`)] %>%
+    radarchart(axistype=0,
+               pcol=colors_border, plwd=2.5, plty=1.5,
+               cglcol="grey", cglty=1, axislabcol="grey", caxislabels = seq(0, 2, 0.2), 
+               cglwd=0.8,
+               vlcex=0.8
+    )
+  legend(x=1.2, y=1.3, legend = top_5[3:7, primaryTitle],
+         bty = "n", pch=20 , col=colors_in , text.col = "black", cex=0.8, pt.cex=3)
+}
+
+
+
 # seasonsViolin ----
+series = fread(paste0(path, "/merged_series_withNA.csv"))
+seasons = fread(paste0(path, "/seasons.csv"))
 colnames(seasons)[[2]] = "tconst"
 seasons = seasons[tconst %in% series[, tconst]]
 seasons = merge(seasons[, .(ID, tconst, seasonNumber, nEpisodes, averageRuntimeMinutes, genres, numVotes, averageRating, minRating, maxRating)],
@@ -259,6 +306,17 @@ fun_genresViolin = function(all_genres, tb2) {
 
 
 # genresLine ----
+series = fread(paste0(path, "/merged_series_withNA.csv"))
+seasons = fread(paste0(path, "/seasons.csv"))
+colnames(seasons)[[2]] = "tconst"
+seasons = seasons[tconst %in% series[, tconst]]
+seasons = merge(seasons[, .(ID, tconst, seasonNumber, nEpisodes, averageRuntimeMinutes, genres, numVotes, averageRating, minRating, maxRating)],
+                series[, .(tconst, primaryTitle, success, averageRating, numVotes, runtimeMinutes, nTranslations, nSeasons, maxSeasonNumber, startYear)],
+                by = "tconst", suffixes = c("Season", "Series"))
+seasons[(success), tconst] %>% unique() %>% length()
+seasons = seasons[maxSeasonNumber == nSeasons]
+seasons[, individualRating := (sd(averageRatingSeason, na.rm = TRUE) != 0), by = tconst]
+seasons = seasons[(individualRating)][, individualRating := NULL]
 season_genres = seasons
 season_genres[, genres := strsplit(genres, "\\|")]
 all_genres2 = c("Action", "Crime", "Mystery", "Drama", "Sci-Fi", "Comedy")
@@ -337,6 +395,109 @@ for (k in 2:15) {
   
   plot_list[[paste0("genresLine_", k)]] = p
 }
+
+
+
+# networksActors ----
+series = fread(paste0(path, "/merged_series_withNA.csv"))
+series = series[(success)]
+series = series[actors != ""]
+series[, actors := strsplit(actors, "\\|")]
+series[, actors := lapply(actors, as.integer)]
+series = series[lapply(actors, function(a) length(a) > 1) %>% unlist()]
+actors_dist = lapply(series[, actors],
+                     function(a) {
+                       combn(a, 2) %>% t() %>% as.data.frame()
+                     }) %>% do.call(what = rbind) %>% cbind(., "value" = 1) %>% as.data.table()
+# create long format for distance matrix
+actors_dist[V1 > V2, `:=`(V1 = V2, V2 = V1)]
+actors_dist[, value := as.integer(value)]
+actors_dist[, value := sum(value), by = .(V1, V2)]
+actors_dist = unique(actors_dist)
+actors_dist = rbindlist(list(actors_dist, actors_dist[, .(V1 = V2, V2 = V1, value)]))
+all_actors = unique(actors_dist[, V1])
+all_actors = sort(all_actors)
+all_actorsDT = data.table("V1" = rep(all_actors, length(all_actors)),
+                          "V2" = rep(all_actors, each = length(all_actors)),
+                          "value" = 0L) #bottleneck
+actors_dist = rbindlist(list(actors_dist, all_actorsDT))
+actors_dist[, value := max(value), by = .(V1, V2)] #bottleneck
+actors_dist = unique(actors_dist)
+unique(actors_dist[, V1]) %>% length()
+unique(actors_dist[, V2]) %>% length()
+# create distance matrix
+d = dcast(actors_dist, V1 ~ V2, value.var = "value") #bottleneck
+d = d[order(V1)]
+rownames(d) = d[, V1]
+s = sort(as.integer(colnames(d)[-1])) %>% as.character
+d = select(d, all_of(s))
+rownames(d) = colnames(d)
+d = as.matrix(d)
+# network graph
+network_actors <- graph_from_adjacency_matrix(d, add.colnames = NA, weighted=NULL, mode="undirected", diag=F)
+# genres for coloring
+series[, genres := strsplit(genres, "\\|")]
+all_genres = series[1:100000, genres] %>% unlist() %>% unique()
+for (g in all_genres) {
+  vcol = lapply(all_actors, function(a) {
+           bool_a = lapply(series[, actors], function(s) a %in% s) %>% unlist()
+           bool_g = lapply(series[, genres], function(genre) g %in% genre) %>% unlist()
+           any(bool_a & bool_g)
+         }) %>% unlist()
+  value_list[[paste0("networkActors_", g)]] = vcol
+}
+
+
+
+# networksDirectors ----
+series = fread(paste0(path, "/merged_series_withNA.csv"))
+series = series[(success)]
+series = series[directors != ""]
+series[, directors := strsplit(directors, "\\|")]
+series[, directors := lapply(directors, as.integer)]
+series = series[lapply(directors, function(a) length(a) > 1) %>% unlist()]
+directors_dist = lapply(series[, directors],
+                     function(a) {
+                       combn(a, 2) %>% t() %>% as.data.frame()
+                     }) %>% do.call(what = rbind) %>% cbind(., "value" = 1) %>% as.data.table()
+# create long format for distance matrix
+directors_dist[V1 > V2, `:=`(V1 = V2, V2 = V1)]
+directors_dist[, value := as.integer(value)]
+directors_dist[, value := sum(value), by = .(V1, V2)]
+directors_dist = unique(directors_dist)
+directors_dist = rbindlist(list(directors_dist, directors_dist[, .(V1 = V2, V2 = V1, value)]))
+all_directors = unique(directors_dist[, V1])
+all_directors = sort(all_directors)
+all_directorsDT = data.table("V1" = rep(all_directors, length(all_directors)),
+                          "V2" = rep(all_directors, each = length(all_directors)),
+                          "value" = 0L) #bottleneck
+directors_dist = rbindlist(list(directors_dist, all_directorsDT))
+directors_dist[, value := max(value), by = .(V1, V2)] #bottleneck
+directors_dist = unique(directors_dist)
+unique(directors_dist[, V1]) %>% length()
+unique(directors_dist[, V2]) %>% length()
+# create distance matrix
+d = dcast(directors_dist, V1 ~ V2, value.var = "value") #bottleneck
+d = d[order(V1)]
+rownames(d) = d[, V1]
+s = sort(as.integer(colnames(d)[-1])) %>% as.character
+d = select(d, all_of(s))
+rownames(d) = colnames(d)
+d = as.matrix(d)
+# network graph
+network_directors <- graph_from_adjacency_matrix(d, add.colnames = NA, weighted=NULL, mode="undirected", diag=F)
+# genres for coloring
+series[, genres := strsplit(genres, "\\|")]
+all_genres = series[1:100000, genres] %>% unlist() %>% unique()
+for (g in all_genres) {
+  vcol = lapply(all_directors, function(a) {
+    bool_a = lapply(series[, directors], function(s) a %in% s) %>% unlist()
+    bool_g = lapply(series[, genres], function(genre) g %in% genre) %>% unlist()
+    any(bool_a & bool_g)
+  }) %>% unlist()
+  value_list[[paste0("networkDirectors_", g)]] = vcol
+}
+
 
 
 

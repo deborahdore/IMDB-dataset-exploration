@@ -49,22 +49,33 @@ d = select(d, all_of(s))
 rownames(d) = colnames(d)
 d = as.matrix(d)
 
-# series names for grouping and labels
-distinct_directors = lapply(all_directors, function(a){
-  data = series[lapply(directors, function(b) a %in% b) %>% unlist()]
-  if (data[, .N] == 1) data[, primaryTitle] else NA
-}) %>% unlist()
-series_names = distinct_directors
-done = character(0)
-for (s in seq_along(distinct_directors)) {
-  if (distinct_directors[[s]] %in% done) series_names[[s]] = NA else done = c(done, distinct_directors[[s]])
-}
-rm(done)
+# # series names for grouping and labels
+# distinct_directors = lapply(all_directors, function(a){
+#   data = series[lapply(directors, function(b) a %in% b) %>% unlist()]
+#   if (data[, .N] == 1) data[, primaryTitle] else NA
+# }) %>% unlist()
+# series_names = distinct_directors
+# done = character(0)
+# for (s in seq_along(distinct_directors)) {
+#   if (distinct_directors[[s]] %in% done) series_names[[s]] = NA else done = c(done, distinct_directors[[s]])
+# }
+# rm(done)
+# 
+# # colors for grouping vertices by series
+# pal = colorRampPalette(brewer.pal(8, "Pastel1"))(82)
+# pal = factor(distinct_directors, labels = pal)
+# levels(pal) = c(levels(pal), "black"); pal[is.na(pal)] = "black"
 
-# colors for grouping vertices by series
-pal = colorRampPalette(brewer.pal(8, "Pastel1"))(82)
-pal = factor(distinct_directors, labels = pal)
-levels(pal) = c(levels(pal), "black"); pal[is.na(pal)] = "black"
+# genres for coloring
+series[, genres := strsplit(genres, "\\|")]
+color_genres = lapply(all_directors, function(a) {
+  gen = series[lapply(directors, function(dir) a %in% dir) %>% unlist(), genres] %>% unlist() %>%
+    table() %>% which.max() %>% names()
+}) %>% unlist()
+color_genres = as.factor(color_genres)
+# pal = brewer.pal(8, "Dark2")
+pal = categorical_pal(8)
+pal = factor(color_genres, labels = pal)
 
 # network graph
 # d[d != 0] = abs(d[d != 0] - max(d[d != 0]) - 1)  # invert the weights
@@ -85,4 +96,6 @@ plot.igraph(network,
             vertex.size=2, vertex.frame.color = "white",
             vertex.color = pal # adjustcolor(pal, alpha.f = 0.9)
 )
+legend('topleft',legend = levels(color_genres), col = categorical_pal(8),
+       pch = 19, pt.cex = 4, cex = 2)
 dev.off()
