@@ -3,15 +3,14 @@ library(plyr)
 library(dplyr)
 library(d3Network)
 library(r2d3)
-library(ggplot2); theme_set(theme_bw())
+library(ggplot2);
 library(forcats)
 library(fmsb)
 library(RColorBrewer)
 library(scales)
 library(stringr)
 
-# path = "//Users/deborah/Documents/IMDB-dataset-exploration/dataset/"
-path = "../IMDB-dataset-exploration-data/"
+path = "//Users/deborah/Documents/IMDB-dataset-exploration/dataset/"
 
 series = fread(paste0(path, "/merged_series_withNA.csv"))
 series = series[success==TRUE]
@@ -158,7 +157,7 @@ colors_border <- brewer.pal(6, "BuPu")[2:6]
 colors_in <- alpha(colors_border,0.9)
 
 
-top_5 = head(top_100, 5)
+top_5 = head(top_100, 7)
 top_5 = top_5[,list(primaryTitle,numVotes, averageRating, nTranslations, runtimeMinutes, nSeasons)]
 
 min_top_5 = list("MINIMO",
@@ -174,17 +173,20 @@ max_top_5 = list("MASSIMO", max(top_5$numVotes),
                  max(top_5$nSeasons))
 
 top_5 = rbindlist(list(max_top_5 , min_top_5 , top_5))
+colors_border=c( rgb(0.2,0.5,0.5,0.9), rgb(0.8,0.2,0.5,0.9) , rgb(0.7,0.5,0.1,0.9),  rgb(0.8,0.2,0.5,0.8) , rgb(0.7,0.5,0.1,0.9) )
+
 colnames(top_5) = c("primaryTitle", "Number of Votes", "Average Rating", "Number of Translations", "Runtime", "Number of Seasons")
 pdf("plots/04_analysis_radar.pdf", height = 5, width = 8)
+par(mar=c(1, 2, 3, 2))
 top_5[,list(`Number of Votes`, `Average Rating`, `Number of Translations`, `Runtime`, `Number of Seasons`)] %>%
   radarchart(axistype=0,
-              pcol=colors_border, plwd=2.5, plty=1.5,
-              cglcol="grey", cglty=1, axislabcol="grey", caxislabels = seq(0, 2, 0.2), 
+              plwd=3, plty=1.5,
+              cglcol="grey", cglty=1, axislabcol="grey", caxislabels = seq(0, 1, 2), 
               cglwd=0.8,
               vlcex=0.8
-  )
-legend(x=1.2, y=1.3, legend = top_5[3:7, primaryTitle],
-       bty = "n", pch=20 , col=colors_in , text.col = "black", cex=0.8, pt.cex=3)
+  ) 
+legend(x=0.8, y=1.35, legend = top_5[3:7, primaryTitle],
+       bty = "n", pch=20 , col=radarchart.color_in , text.col = "black", cex=0.8, pt.cex=3)
 dev.off()
 
 
