@@ -120,8 +120,8 @@ fun_radarPlot = function(titles, top_5) {
                    max(top_5$nSeasons))
   top_5 = merge(data.frame("primaryTitle" = titles), top_5, all.x = TRUE, all.y = FALSE)
   top_5 = rbindlist(list(max_top_5 , min_top_5 , top_5))
-  colnames(top_5) = c("primaryTitle", "Number of Votes", "Average Rating", "Number of Translations", "Runtime", "Number of Seasons")
-  top_5[,list(`Number of Votes`, `Average Rating`, `Number of Translations`, `Runtime`, `Number of Seasons`)] %>%
+  colnames(top_5) = c("primaryTitle", "log(Number of Votes)", "Average Rating", "Number of Translations", "Runtime", "Number of Seasons")
+  top_5[,list(`log(Number of Votes)`, `Average Rating`, `Number of Translations`, `Runtime`, `Number of Seasons`)] %>%
     radarchart(axistype=0,
                pcol=colors_border, plwd=2.5, plty=1.5,
                cglcol="grey", cglty=1, axislabcol="grey", caxislabels = seq(0, 2, 0.2), 

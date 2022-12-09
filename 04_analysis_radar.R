@@ -20,35 +20,39 @@ series = series[success==TRUE]
 colors_border <- brewer.pal(6, "BuPu")[2:6]
 colors_in <- alpha(colors_border,0.9)
 
-minmaxscale = function(v) (v - min(v)) / (max(v) - min(v))
-weighted_mean_vec = rowMeans(matrix(c(minmaxscale(series[, averageRating]),
-                                      minmaxscale(log10(series[, numVotes])),
-                                      minmaxscale(log10(series[, nTranslations]))), ncol = 3))
-series[, weighted_mean := weighted_mean_vec]
+# minmaxscale = function(v) (v - min(v)) / (max(v) - min(v))
+# weighted_mean_vec = rowMeans(matrix(c(minmaxscale(series[, averageRating]),
+#                                       minmaxscale(log10(series[, numVotes])),
+#                                       minmaxscale(log10(series[, nTranslations]))), ncol = 3))
+# series[, weighted_mean := weighted_mean_vec]
+# 
+# series = series[order(-weighted_mean), ]
+# 
+# top_100 = head(series, 100)
+# 
+# top_5 = head(top_100, 10)
 
-series = series[order(-weighted_mean), ]
-
-top_100 = head(series, 100)
-
-top_5 = head(top_100, 5)
-top_5 = top_5[,list(primaryTitle,numVotes, averageRating, nTranslations, runtimeMinutes, nSeasons)]
+series[, log_numVotes := log10(numVotes)]
+top_5 = series[,list(primaryTitle, log_numVotes, averageRating, nTranslations, runtimeMinutes, nSeasons)]
 
 min_top_5 = list("MINIMO",
-                 min(top_5$numVotes),
+                 min(top_5$log_numVotes),
                  min(top_5$averageRating),
                  min(top_5$nTranslations),
                  min(top_5$runtimeMinutes),
                  min(top_5$nSeasons))
-max_top_5 = list("MASSIMO", max(top_5$numVotes),
+max_top_5 = list("MASSIMO", max(top_5$log_numVotes),
                  max(top_5$averageRating),
                  max(top_5$nTranslations),
-                 max(top_5$runtimeMinutes),
+                 100, #max(top_5$runtimeMinutes),
                  max(top_5$nSeasons))
 
+top_5 = top_5[primaryTitle %in% c("Game of Thrones", "Sherlock", "Rick and Morty", "Stranger Things", "True Detective")]
+
 top_5 = rbindlist(list(max_top_5 , min_top_5 , top_5))
-colnames(top_5) = c("primaryTitle", "Number of Votes", "Average Rating", "Number of Translations", "Runtime", "Number of Seasons")
+colnames(top_5) = c("primaryTitle", "log(Number of Votes)", "Average Rating", "Number of Translations", "Runtime", "Number of Seasons")
 pdf("plots/04_analysis_radar.pdf", height = 5, width = 8)
-top_5[,list(`Number of Votes`, `Average Rating`, `Number of Translations`, `Runtime`, `Number of Seasons`)] %>%
+top_5[,list(`log(Number of Votes)`, `Average Rating`, `Number of Translations`, `Runtime`, `Number of Seasons`)] %>%
   radarchart(axistype=0,
              pcol=colors_border, plwd=2.5, plty=1.5,
              cglcol="grey", cglty=1, axislabcol="grey", caxislabels = seq(0, 2, 0.2), 
