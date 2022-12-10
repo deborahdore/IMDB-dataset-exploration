@@ -49,27 +49,38 @@ d = select(d, all_of(s))
 rownames(d) = colnames(d)
 d = as.matrix(d)
 
-# actor names for the labels
-actors_names = fread(paste0(path, "/name.basics_clean.csv"))
-actors_names = actors_names[nconst %in% all_actors]
-actors_names = actors_names[order(nconst), primaryName]
+# # actor names for the labels
+# actors_names = fread(paste0(path, "/name.basics_clean.csv"))
+# actors_names = actors_names[nconst %in% all_actors]
+# actors_names = actors_names[order(nconst), primaryName]
+# 
+# # series names for grouping and labels
+# distinct_actors = lapply(all_actors, function(a){
+#   data = series[lapply(actors, function(b) a %in% b) %>% unlist()]
+#   if (data[, .N] == 1) data[, primaryTitle] else NA
+# }) %>% unlist()
+# series_names = distinct_actors
+# done = character(0)
+# for (s in seq_along(distinct_actors)) {
+#   if (distinct_actors[[s]] %in% done) series_names[[s]] = NA else done = c(done, distinct_actors[[s]])
+# }
+# rm(done)
+# 
+# # colors for grouping vertices by series
+# pal = colorRampPalette(brewer.pal(8, "Pastel1"))(100)
+# pal = factor(distinct_actors, labels = pal)
+# levels(pal) = c(levels(pal), "black"); pal[is.na(pal)] = "black"
 
-# series names for grouping and labels
-distinct_actors = lapply(all_actors, function(a){
-  data = series[lapply(actors, function(b) a %in% b) %>% unlist()]
-  if (data[, .N] == 1) data[, primaryTitle] else NA
+# genres for coloring
+series[, genres := strsplit(genres, "\\|")]
+color_genres = lapply(all_actors, function(a) {
+  gen = series[lapply(actors, function(act) a %in% act) %>% unlist(), genres] %>% unlist() %>%
+    table() %>% which.max() %>% names()
 }) %>% unlist()
-series_names = distinct_actors
-done = character(0)
-for (s in seq_along(distinct_actors)) {
-  if (distinct_actors[[s]] %in% done) series_names[[s]] = NA else done = c(done, distinct_actors[[s]])
-}
-rm(done)
-
-# colors for grouping vertices by series
-pal = colorRampPalette(brewer.pal(8, "Pastel1"))(100)
-pal = factor(distinct_actors, labels = pal)
-levels(pal) = c(levels(pal), "black"); pal[is.na(pal)] = "black"
+color_genres = as.factor(color_genres)
+# pal = brewer.pal(8, "Dark2")
+pal = categorical_pal(8)
+pal = factor(color_genres, labels = pal)
 
 # network graph
 # d[d != 0] = abs(d[d != 0] - max(d[d != 0]) - 1)  # invert the weights
@@ -87,8 +98,11 @@ plot.igraph(network,
      # arrow.size = 100,
      # vertex.size=actors_size/4,
      vertex.size=2, vertex.frame.color = "white",
-     vertex.color = pal # adjustcolor(pal, alpha.f = 0.9)
+     vertex.color = pal
+     # vertex.color = pal # adjustcolor(pal, alpha.f = 0.9)
      )
+legend('topleft',legend = levels(color_genres), col = categorical_pal(8),
+       pch = 19, pt.cex = 4, cex = 2)
 dev.off()
 
 

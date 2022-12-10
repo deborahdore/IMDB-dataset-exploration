@@ -15,6 +15,10 @@ series = series[actors != ""]
 series[, actors := strsplit(actors, "\\|")]
 series[, actors := lapply(actors, as.integer)]
 series = series[lapply(actors, function(a) length(a) > 1) %>% unlist()]
+actors_dist = lapply(series[, actors],
+                     function(a) {
+                       combn(a, 2) %>% t() %>% as.data.frame()
+                     }) %>% do.call(what = rbind) %>% cbind(., "value" = 1) %>% as.data.table()
 
 # create long format for distance matrix
 actors_dist = unique(actors_dist)
