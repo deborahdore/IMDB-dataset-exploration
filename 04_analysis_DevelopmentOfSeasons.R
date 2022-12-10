@@ -6,7 +6,8 @@ options(scipen = 1000000)
 library(scales)
 library(viridis)
 
-path = "../IMDB-dataset-exploration-data/"
+#path = "../IMDB-dataset-exploration-data/"
+path="./dataset/"
 
 seasons = fread(paste0(path, "/seasons.csv"))
 series = fread(paste0(path, "/merged_series_withNA.csv"))
@@ -67,8 +68,8 @@ ggplot(series[runtimeMinutes <= 200], aes(x = Seasons, y = runtimeMinutes, alpha
   coord_cartesian(ylim = c(0, 100)) +
   xlab("Number of Seasons") + ylab("") +
   ggtitle("Runtime in Minutes")
-, ncol = 4, common.legend = TRUE, legend = "right")
-ggsave("plots/04_analysis_SeasonsBoxplots.pdf", height = 3, width = 14)
+, ncol = 2, nrow=2, common.legend = TRUE, legend = "right")
+ggsave("plots/04_analysis_SeasonsBoxplots.pdf", height = 5, width = 7)
 
 # Difference to previous season
 # seasons[, diffRating := NaN]
@@ -99,7 +100,7 @@ ggsave("plots/04_analysis_SeasonsBoxplots.pdf", height = 3, width = 14)
 season_genres = seasons
 season_genres[, genres := strsplit(genres, "\\|")]
 # all_genres = c("Action", "Adventure", "Animation", "Comedy", "Crime", "Drama", "Fantasy", "Mystery", "Romance", "Sci-Fi", "Thriller")
-all_genres = c("Action", "Crime", "Mystery", "Drama", "Sci-Fi", "Comedy")
+all_genres = c("Action", "Comedy", "Crime", "Drama", "Mystery")
 for (g_col in all_genres) {
   season_genres[, (g_col) := lapply(genres, function(g_row) any(g_row == g_col)) %>% unlist()]
 }
@@ -192,7 +193,7 @@ ggplot() +
   theme(legend.position = "none"),
 ncol = 1)
 
-ggsave("plots/04_analysis_DevelopmentOfSeasons.pdf", height = 6, width = 14)
+ggsave("plots/04_analysis_DevelopmentOfSeasons.pdf", height = 6, width = 12)
 
 # nTranslation doesn't differ between seasons
 

@@ -12,7 +12,8 @@ library(viridis)
 # library(splitstackshape)
 
 # path = "/Users/marianabarbosa/Desktop/DV_Project/IMDB/"
-path = "../IMDB-dataset-exploration-data/"
+# path = "../IMDB-dataset-exploration-data/"
+path = "./dataset"
 tb = fread(paste0(path, "/merged_series_withNA.csv"))
 
 
@@ -22,7 +23,7 @@ tb[, genres := strsplit(genres, "\\|")]
 all_genres = c("Action", "Adventure", "Animation" ,"Comedy", 
                "Crime", "Drama", "Fantasy", "Mistery", "Romance", 
                "Sci-Fi", "Thriller")
-all_genres = c("Action", "Crime", "Mystery", "Drama", "Sci-Fi", "Comedy")
+all_genres = c("Action", "Adventure", "Animation", "Comedy", "Romance")
 for (g_col in all_genres) {tb[, (g_col) := lapply(genres, function(g_row) any(g_row == g_col)) %>% unlist()]}
 tb = melt(tb, id.vars = c("tconst", "success", "runtimeMinutes", "averageRating", "numVotes", "nTranslations"),
           measure.vars = all_genres,
@@ -48,7 +49,7 @@ ggplot(tb, aes(x = genres, y = numVotes, fill = genres, alpha = success)) +
   scale_alpha_manual(values = c(0.2, 0.8)) +
   scale_y_continuous(trans = "log10") +
   scale_fill_viridis(discrete = TRUE, end = 0.85) +
-  ggtitle("Number of Votes") + xlab("") + ylab("") +
+  ggtitle("N° of Votes") + xlab("") + ylab("") +
   theme(axis.text.x=element_text(angle=40,hjust=1)),
 # translations
 ggplot(tb, aes(x = genres, y = nTranslations, fill = genres, alpha = success)) +
@@ -56,7 +57,7 @@ ggplot(tb, aes(x = genres, y = nTranslations, fill = genres, alpha = success)) +
   scale_alpha_manual(values = c(0.2, 0.8)) +
   scale_fill_viridis(discrete = TRUE, end = 0.85) +
   coord_cartesian(ylim = c(0, 80)) +
-  ggtitle("Number of Translations") + xlab("") + ylab("") +
+  ggtitle("N° of Translations") + xlab("") + ylab("") +
   theme(axis.text.x=element_text(angle=40,hjust=1)),
 # run time
 ggplot(tb[runtimeMinutes <= 200], aes(x = genres, y = runtimeMinutes, fill = genres, alpha = success)) +
@@ -67,9 +68,9 @@ ggplot(tb[runtimeMinutes <= 200], aes(x = genres, y = runtimeMinutes, fill = gen
   coord_cartesian(ylim = c(0, 100)) +
   ggtitle("Runtime in Minutes") + xlab("") + ylab("") +
   theme(axis.text.x=element_text(angle=40,hjust=1)),
-ncol = 4, common.legend = TRUE, legend = "right", widths = c(1, 1.2, 1, 1))
+ncol = 2, nrow=2, common.legend = TRUE, legend = "right", widths = c(1, 1.2, 1, 1))
 
-ggsave("plots/04_analysis_GenresViolin.pdf", height = 2.5, width = 10)
+ggsave("plots/04_analysis_GenresViolin.pdf", height = 5, width = 7)
 
 
 
@@ -111,8 +112,8 @@ ggplot(tb[(success)], aes(x = genres, y = total_success, fill = genres,
   ggtitle("Number of successfull series in each genre") +
   theme(axis.text.x=element_text(angle=40,hjust=1),
         legend.position = "none")
-, ncol = 2)
-ggsave("plots/04_analysis_genresDistribution.pdf", height = 3.5, width = 12)
+, ncol = 1)
+ggsave("plots/04_analysis_genresDistribution.pdf", height = 7, width = 5)
 
 
 
