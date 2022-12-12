@@ -1,12 +1,11 @@
+.DS_Store
+*.DS_Store
 05_dashboard_workspace.rda
 .RData
 .RDataTmp
 .Rhistory
 dataset/*
 schemas/.DS_Store
-*.DS_Store
-*/.DS_Store
-.DS_Store
 .Rproj.user
 *.Rproj
 */*.Rproj
